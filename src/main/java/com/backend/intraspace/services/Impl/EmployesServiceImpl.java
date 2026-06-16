@@ -1,14 +1,28 @@
 package com.backend.intraspace.services.Impl;
 
+import com.backend.intraspace.dtos.ChangePasswordRequestDto;
+import com.backend.intraspace.dtos.EmployeRequestDto;
+import com.backend.intraspace.dtos.EmployeResponseDto;
+import com.backend.intraspace.entities.Employe;
+import com.backend.intraspace.mappers.EmployesMapper;
+import com.backend.intraspace.repositories.EmployeRepository;
 import com.backend.intraspace.dtos.CreateEmployeeRequest;
 import com.backend.intraspace.dtos.EmployeeResponse;
 import com.backend.intraspace.entities.Employee;
 import com.backend.intraspace.repositories.EmployesRepo;
 import com.backend.intraspace.services.EmployesService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
 import com.backend.intraspace.services.NotificationService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
 import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -16,6 +30,72 @@ import java.util.List;
 
 @Service
 public class EmployesServiceImpl implements EmployesService {
+
+    private final EmployeRepository employeRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    public EmployeResponseDto createEmploye(EmployeRequestDto employeRequestDto){
+        Employe  employe = EmployesMapper.toEntity(employeRequestDto);
+        employe.setPassword(passwordEncoder.encode(employeRequestDto.getPassword()));
+        employe.setCreatedAt(LocalDate.now());
+        employe.setActive(true);
+        employe.setFirstLogin(true);
+        employeRepository.save(employe);
+        EmployeResponseDto employeResponseDto=EmployesMapper.toDto(employe);
+        return employeResponseDto;
+    }
+
+    public List<EmployeResponseDto> getAllEmployes(){
+        List<Employe> employes=employeRepository.findAll();
+        return employes.stream()
+                .map(EmployesMapper::toDto)
+                .toList();
+
+    }
+
+    public EmployeResponseDto getEmployeById(Long id){
+        Employe employe=employeRepository.findById(id)
+                .orElseThrow(()->new RuntimeException("employe not found"));
+        return EmployesMapper.toDto(employe);
+    }
+
+    public EmployeResponseDto updateEmploye(Long id, EmployeRequestDto employeRequestDto){
+        Employe employeExistant=employeRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Employé non trouvé"));
+        employeExistant.setNom(employeRequestDto.getNom());
+        employeExistant.setPrenom(employeRequestDto.getPrenom());
+        employeExistant.setEmail(employeRequestDto.getEmail());
+        employeExistant.setRole(employeRequestDto.getRole());
+        employeRepository.save(employeExistant);
+        return EmployesMapper.toDto(employeExistant);
+
+    }
+
+    public void desactivateEmploye(Long id){
+        Employe employe=employeRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Employé non trouvé"));
+        employe.setActive(false);
+        employeRepository.save(employe);
+    }
+
+    public void changePassword(String email, ChangePasswordRequestDto requestDto){
+        Employe employe=employeRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("employe not found"));
+
+        if(!passwordEncoder.matches(requestDto.getOldPassword(),employe.getPassword())){
+            throw new RuntimeException("passwords dont match");
+        }
+        employe.setPassword(passwordEncoder.encode(requestDto.getNewPassword()));
+
+        employe.setFirstLogin(false);
+        employeRepository.save(employe);
+    }
+
+
+
+
+
+
 
     private final EmployesRepo employesRepo;
     private final PasswordEncoder passwordEncoder;

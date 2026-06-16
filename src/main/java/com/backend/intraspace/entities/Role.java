@@ -1,6 +1,6 @@
 package com.backend.intraspace.entities;
 
 public enum Role {
-    EMPLOYEE,
-    ADMIN
+    ROLE_EMPLOYE,
+    ROLE_ADMIN
 }
