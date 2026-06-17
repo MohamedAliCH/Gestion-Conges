@@ -33,22 +33,23 @@ public class EmployesServiceImpl implements EmployesService {
 
     private final EmployeRepository employeRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmployesMapper employesMapper;
 
     public EmployeResponseDto createEmploye(EmployeRequestDto employeRequestDto){
-        Employe  employe = EmployesMapper.toEntity(employeRequestDto);
+        Employe  employe = employesMapper.toEntity(employeRequestDto);
         employe.setPassword(passwordEncoder.encode(employeRequestDto.getPassword()));
         employe.setCreatedAt(LocalDate.now());
         employe.setActive(true);
         employe.setFirstLogin(true);
         employeRepository.save(employe);
-        EmployeResponseDto employeResponseDto=EmployesMapper.toDto(employe);
+        EmployeResponseDto employeResponseDto=employesMapper.toDto(employe);
         return employeResponseDto;
     }
 
     public List<EmployeResponseDto> getAllEmployes(){
         List<Employe> employes=employeRepository.findAll();
         return employes.stream()
-                .map(EmployesMapper::toDto)
+                .map(employesMapper::toDto)
                 .toList();
 
     }
@@ -56,7 +57,7 @@ public class EmployesServiceImpl implements EmployesService {
     public EmployeResponseDto getEmployeById(Long id){
         Employe employe=employeRepository.findById(id)
                 .orElseThrow(()->new RuntimeException("employe not found"));
-        return EmployesMapper.toDto(employe);
+        return employesMapper.toDto(employe);
     }
 
     public EmployeResponseDto updateEmploye(Long id, EmployeRequestDto employeRequestDto){
@@ -67,7 +68,7 @@ public class EmployesServiceImpl implements EmployesService {
         employeExistant.setEmail(employeRequestDto.getEmail());
         employeExistant.setRole(employeRequestDto.getRole());
         employeRepository.save(employeExistant);
-        return EmployesMapper.toDto(employeExistant);
+        return employesMapper.toDto(employeExistant);
 
     }
 
