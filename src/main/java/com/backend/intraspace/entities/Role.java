@@ -1,4 +1,6 @@
 package com.backend.intraspace.entities;
 
-public class Employes {
+public enum Role {
+    EMPLOYEE,
+    ADMIN
 }
