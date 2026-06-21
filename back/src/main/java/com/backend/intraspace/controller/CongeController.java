@@ -11,7 +11,7 @@ import java.security.Principal;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/employee/leaves")
+@RequestMapping("/api/employe/conges")
 @RequiredArgsConstructor
 public class CongeController {
 

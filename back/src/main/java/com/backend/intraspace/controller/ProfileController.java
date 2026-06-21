@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.security.Principal;
 
 @RestController
-@RequestMapping("/api/employee/profile")
+@RequestMapping("/api/employe/profil")
 @RequiredArgsConstructor
 public class ProfileController {
 
