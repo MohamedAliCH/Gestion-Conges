@@ -1,7 +1,5 @@
 package com.backend.intraspace.security;
 
-import com.backend.intraspace.entities.Employee;
-import com.backend.intraspace.repositories.EmployesRepo;
 import org.springframework.security.core.userdetails.User;
 import com.backend.intraspace.entities.Employe;
 import com.backend.intraspace.repositories.EmployeRepository;
