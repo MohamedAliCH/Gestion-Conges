@@ -39,4 +39,8 @@ public class Conge {
     private String status; // "En attente", "Approuvé", "Annulé", "Rejeté"
 
     private String reason;
+
+    @Column(name = "refus_motif")
+    private String refusMotif;
 }
+

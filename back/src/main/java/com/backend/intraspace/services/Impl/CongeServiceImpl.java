@@ -71,10 +71,39 @@ public class CongeServiceImpl implements CongeService {
         String color = "warning";
         if ("Approuvé".equalsIgnoreCase(conge.getStatus())) {
             color = "success";
-        } else if ("Rejeté".equalsIgnoreCase(conge.getStatus()) || "Annulé".equalsIgnoreCase(conge.getStatus())) {
+        } else if ("Refusé".equalsIgnoreCase(conge.getStatus()) || "Annulé".equalsIgnoreCase(conge.getStatus())) {
             color = "danger";
         }
         dto.setStatusColor(color);
         return dto;
     }
+
+    @Override
+    public List<CongeResponseDto> getAllLeaves() {
+        return congeRepository.findAllByOrderByDateDebutDesc().stream()
+                .map(this::mapToDtoWithColor)
+                .toList();
+    }
+
+    @Override
+    public CongeResponseDto approveLeave(Long id) {
+        Conge conge = congeRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Demande de congé non trouvée"));
+        conge.setStatus("Approuvé");
+        conge.setRefusMotif(null);
+        Conge savedConge = congeRepository.save(conge);
+        return mapToDtoWithColor(savedConge);
+    }
+
+    @Override
+    public CongeResponseDto rejectLeave(Long id, String reason) {
+        Conge conge = congeRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Demande de congé non trouvée"));
+        conge.setStatus("Refusé");
+        conge.setRefusMotif(reason);
+        Conge savedConge = congeRepository.save(conge);
+        return mapToDtoWithColor(savedConge);
+    }
+
 }
+

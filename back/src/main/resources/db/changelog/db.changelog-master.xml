@@ -128,4 +128,10 @@
         </update>
     </changeSet>
 
+    <changeSet id="004-add-refus-motif" author="antigravity">
+        <addColumn tableName="conges">
+            <column name="refus_motif" type="VARCHAR(1000)"/>
+        </addColumn>
+    </changeSet>
+
 </databaseChangeLog>

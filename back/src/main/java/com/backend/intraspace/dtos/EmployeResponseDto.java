@@ -23,4 +23,6 @@ public class EmployeResponseDto {
     private boolean firstLogin;
     private String phone;
     private String address;
+    private String generatedPassword;
 }
+

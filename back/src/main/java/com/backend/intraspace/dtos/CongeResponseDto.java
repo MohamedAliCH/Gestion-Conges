@@ -16,4 +16,8 @@ public class CongeResponseDto {
     private String status;
     private String statusColor;
     private String reason;
+    private String refusMotif;
+    private String employeNom;
+    private Long employeId;
 }
+

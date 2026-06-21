@@ -7,4 +7,6 @@ import java.util.List;
 public interface CongeRepository extends JpaRepository<Conge, Long> {
     List<Conge> findByEmployeEmailOrderByDateDebutDesc(String email);
     List<Conge> findByEmployeIdOrderByDateDebutDesc(Long id);
+    List<Conge> findAllByOrderByDateDebutDesc();
 }
+

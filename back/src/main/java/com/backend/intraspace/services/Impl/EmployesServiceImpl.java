@@ -51,6 +51,7 @@ public class EmployesServiceImpl implements EmployesService {
         System.out.println("==========================================================");
         
         EmployeResponseDto employeResponseDto=employesMapper.toDto(employe);
+        employeResponseDto.setGeneratedPassword(generatedPassword);
         return employeResponseDto;
     }
 
@@ -85,9 +86,10 @@ public class EmployesServiceImpl implements EmployesService {
     public void desactivateEmploye(Long id){
         Employe employe=employeRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Employé non trouvé"));
-        employe.setActive(false);
+        employe.setActive(!employe.isActive());
         employeRepository.save(employe);
     }
+
 
     public void changePassword(String email, ChangePasswordRequestDto requestDto){
         Employe employe=employeRepository.findByEmail(email)

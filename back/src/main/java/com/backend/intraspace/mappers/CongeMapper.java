@@ -13,12 +13,17 @@ public interface CongeMapper {
     @Mapping(target = "employe", ignore = true)
     @Mapping(target = "days", ignore = true)
     @Mapping(target = "status", ignore = true)
+    @Mapping(target = "refusMotif", ignore = true)
     @Mapping(target = "dateDebut", source = "from")
     @Mapping(target = "dateFin", source = "to")
     Conge toEntity(CongeRequestDto dto);
 
+
     @Mapping(source = "dateDebut", target = "from", dateFormat = "yyyy-MM-dd")
     @Mapping(source = "dateFin", target = "to", dateFormat = "yyyy-MM-dd")
     @Mapping(target = "statusColor", ignore = true) // Will be mapped programmatically or computed
+    @Mapping(source = "employe.id", target = "employeId")
+    @Mapping(target = "employeNom", expression = "java(conge.getEmploye() != null ? conge.getEmploye().getPrenom() + \" \" + conge.getEmploye().getNom() : null)")
     CongeResponseDto toDto(Conge conge);
 }
+

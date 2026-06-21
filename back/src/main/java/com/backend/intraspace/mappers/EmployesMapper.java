@@ -17,7 +17,7 @@ public interface EmployesMapper {
     @Mapping(target = "password", ignore = true)
     Employe toEntity(EmployeRequestDto dto);
 
+    @Mapping(target = "generatedPassword", ignore = true)
     EmployeResponseDto toDto(Employe employe);
-
-
 }
+
