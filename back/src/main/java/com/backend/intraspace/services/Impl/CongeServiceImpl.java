@@ -11,6 +11,7 @@ import com.backend.intraspace.services.CongeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
@@ -29,6 +30,9 @@ public class CongeServiceImpl implements CongeService {
 
         if (requestDto.getTo().isBefore(requestDto.getFrom())) {
             throw new RuntimeException("La date de fin doit être après ou égale à la date de début.");
+        }
+        if (!requestDto.getFrom().isAfter(LocalDate.now())) {
+            throw new RuntimeException("La date de début doit être après la date d'aujourd'hui.");
         }
 
         Conge conge = congeMapper.toEntity(requestDto);
