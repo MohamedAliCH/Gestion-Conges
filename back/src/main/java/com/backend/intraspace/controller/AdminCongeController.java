@@ -22,6 +22,12 @@ public class AdminCongeController {
         return ResponseEntity.ok(leaves);
     }
 
+    @GetMapping("/en-attente")
+    public ResponseEntity<List<CongeResponseDto>> getPendingLeaves() {
+        List<CongeResponseDto> leaves = congeService.getPendingLeaves();
+        return ResponseEntity.ok(leaves);
+    }
+
     @PutMapping("/{id}/approuver")
     public ResponseEntity<CongeResponseDto> approveLeave(@PathVariable Long id) {
         CongeResponseDto updated = congeService.approveLeave(id);

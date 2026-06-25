@@ -46,9 +46,21 @@ public class Employe {
     @Column(name = "created_at")
     private LocalDate createdAt;
 
+    @Column(name = "date_embauche")
+    private LocalDate dateEmbauche;
+
     @Column(name = "first_login", nullable = false)
     private boolean firstLogin=true;
 
     private String phone;
     private String address;
+
+    @Column(name = "temp_password")
+    private String tempPassword;
+
+    @Column(name = "solde_annuel")
+    private int soldeAnnuel = 0;
+
+    @Column(name = "solde_maladie")
+    private int soldeMaladie = 8;
 }

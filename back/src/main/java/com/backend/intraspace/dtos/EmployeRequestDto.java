@@ -2,6 +2,7 @@ package com.backend.intraspace.dtos;
 
 import com.backend.intraspace.entities.Role;
 import lombok.*;
+import java.time.LocalDate;
 
 @Data
 @AllArgsConstructor
@@ -15,4 +16,5 @@ public class EmployeRequestDto {
     private Role role;
     private String phone;
     private String address;
+    private LocalDate dateEmbauche;
 }

@@ -9,6 +9,7 @@ public interface CongeService {
     List<CongeResponseDto> getMyLeaves(String email);
     void cancelLeave(Long id, String email);
     List<CongeResponseDto> getAllLeaves();
+    List<CongeResponseDto> getPendingLeaves();
     CongeResponseDto approveLeave(Long id);
     CongeResponseDto rejectLeave(Long id, String reason);
 }

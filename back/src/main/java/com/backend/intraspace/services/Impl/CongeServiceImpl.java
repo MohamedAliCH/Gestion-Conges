@@ -39,9 +39,46 @@ public class CongeServiceImpl implements CongeService {
         conge.setEmploye(employe);
 
         long diffDays = ChronoUnit.DAYS.between(requestDto.getFrom(), requestDto.getTo()) + 1;
-        conge.setDays((int) diffDays);
-        conge.setStatus("En attente");
+        int days = (int) diffDays;
+        conge.setDays(days);
 
+        // Capacity check: at most 2 approved employees on any single day of the range
+        List<Conge> overlapping = congeRepository.findApprovedOverlapping(
+                requestDto.getFrom(), requestDto.getTo(), employe.getId());
+        for (LocalDate day = requestDto.getFrom(); !day.isAfter(requestDto.getTo()); day = day.plusDays(1)) {
+            final LocalDate d = day;
+            long count = overlapping.stream()
+                    .filter(c -> !c.getDateDebut().isAfter(d) && !c.getDateFin().isBefore(d))
+                    .count();
+            if (count >= 2) {
+                conge.setStatus("Refusé");
+                conge.setRefusMotif("Capacité maximale atteinte — 2 employés déjà approuvés le " + d);
+                return mapToDtoWithColor(congeRepository.save(conge));
+            }
+        }
+
+        String type = requestDto.getType();
+        if ("Congé Annuel".equals(type)) {
+            if (employe.getSoldeAnnuel() < days) {
+                conge.setStatus("Refusé");
+                conge.setRefusMotif("Solde insuffisant — " + employe.getSoldeAnnuel() + " jour(s) disponible(s)");
+                Conge savedConge = congeRepository.save(conge);
+                return mapToDtoWithColor(savedConge);
+            }
+            employe.setSoldeAnnuel(employe.getSoldeAnnuel() - days);
+            employeRepository.save(employe);
+        } else if ("Congé Maladie".equals(type)) {
+            if (employe.getSoldeMaladie() < days) {
+                conge.setStatus("Refusé");
+                conge.setRefusMotif("Solde insuffisant — " + employe.getSoldeMaladie() + " jour(s) disponible(s)");
+                Conge savedConge = congeRepository.save(conge);
+                return mapToDtoWithColor(savedConge);
+            }
+            employe.setSoldeMaladie(employe.getSoldeMaladie() - days);
+            employeRepository.save(employe);
+        }
+
+        conge.setStatus("En attente");
         Conge savedConge = congeRepository.save(conge);
         return mapToDtoWithColor(savedConge);
     }
@@ -67,6 +104,7 @@ public class CongeServiceImpl implements CongeService {
             throw new RuntimeException("Seules les demandes en attente peuvent être annulées.");
         }
 
+        refundCredits(conge);
         congeRepository.delete(conge);
     }
 
@@ -90,6 +128,13 @@ public class CongeServiceImpl implements CongeService {
     }
 
     @Override
+    public List<CongeResponseDto> getPendingLeaves() {
+        return congeRepository.findByStatusOrderByDateDebutDesc("En attente").stream()
+                .map(this::mapToDtoWithColor)
+                .toList();
+    }
+
+    @Override
     public CongeResponseDto approveLeave(Long id) {
         Conge conge = congeRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Demande de congé non trouvée"));
@@ -103,10 +148,23 @@ public class CongeServiceImpl implements CongeService {
     public CongeResponseDto rejectLeave(Long id, String reason) {
         Conge conge = congeRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Demande de congé non trouvée"));
+        refundCredits(conge);
         conge.setStatus("Refusé");
         conge.setRefusMotif(reason);
         Conge savedConge = congeRepository.save(conge);
         return mapToDtoWithColor(savedConge);
+    }
+
+    private void refundCredits(Conge conge) {
+        if (!"En attente".equals(conge.getStatus())) return;
+        Employe employe = conge.getEmploye();
+        if ("Congé Annuel".equals(conge.getType())) {
+            employe.setSoldeAnnuel(employe.getSoldeAnnuel() + conge.getDays());
+            employeRepository.save(employe);
+        } else if ("Congé Maladie".equals(conge.getType())) {
+            employe.setSoldeMaladie(employe.getSoldeMaladie() + conge.getDays());
+            employeRepository.save(employe);
+        }
     }
 
 }

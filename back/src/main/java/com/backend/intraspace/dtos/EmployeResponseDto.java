@@ -20,9 +20,13 @@ public class EmployeResponseDto {
     private Role role;
     private boolean isActive;
     private LocalDate createdAt;
+    private LocalDate dateEmbauche;
     private boolean firstLogin;
     private String phone;
     private String address;
     private String generatedPassword;
+    private String tempPassword;
+    private int soldeAnnuel;
+    private int soldeMaladie;
 }
 

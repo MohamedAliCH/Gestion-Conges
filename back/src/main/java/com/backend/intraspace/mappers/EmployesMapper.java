@@ -15,6 +15,10 @@ public interface EmployesMapper {
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "firstLogin", ignore = true)
     @Mapping(target = "password", ignore = true)
+    @Mapping(target = "tempPassword", ignore = true)
+    @Mapping(target = "soldeAnnuel", ignore = true)
+    @Mapping(target = "soldeMaladie", ignore = true)
+    @Mapping(target = "dateEmbauche", source = "dateEmbauche")
     Employe toEntity(EmployeRequestDto dto);
 
     @Mapping(target = "generatedPassword", ignore = true)

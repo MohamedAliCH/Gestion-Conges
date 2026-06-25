@@ -5,6 +5,7 @@ import com.backend.intraspace.dtos.EmployeRequestDto;
 import com.backend.intraspace.dtos.EmployeResponseDto;
 import com.backend.intraspace.entities.Employe;
 import com.backend.intraspace.mappers.EmployesMapper;
+import com.backend.intraspace.repositories.CongeRepository;
 import com.backend.intraspace.repositories.EmployeRepository;
 import com.backend.intraspace.services.EmployesService;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +13,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @Service
@@ -20,6 +22,7 @@ public class EmployesServiceImpl implements EmployesService {
 
 
     private final EmployeRepository employeRepository;
+    private final CongeRepository congeRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmployesMapper employesMapper;
 
@@ -36,10 +39,17 @@ public class EmployesServiceImpl implements EmployesService {
         // Generate random 8 character password
         String generatedPassword = java.util.UUID.randomUUID().toString().substring(0, 8);
         employe.setPassword(passwordEncoder.encode(generatedPassword));
-        
+        employe.setTempPassword(generatedPassword);
         employe.setCreatedAt(LocalDate.now());
         employe.setActive(true);
         employe.setFirstLogin(true);
+
+        LocalDate hireDate = employeRequestDto.getDateEmbauche() != null
+                ? employeRequestDto.getDateEmbauche()
+                : LocalDate.now();
+        employe.setDateEmbauche(hireDate);
+        long monthsWorked = ChronoUnit.MONTHS.between(hireDate, LocalDate.now());
+        employe.setSoldeAnnuel((int) monthsWorked * 2);
         employeRepository.save(employe);
         
         // Simulating sending email
@@ -78,6 +88,14 @@ public class EmployesServiceImpl implements EmployesService {
         employeExistant.setRole(employeRequestDto.getRole());
         employeExistant.setPhone(employeRequestDto.getPhone());
         employeExistant.setAddress(employeRequestDto.getAddress());
+        if (employeRequestDto.getDateEmbauche() != null) {
+            LocalDate newHireDate = employeRequestDto.getDateEmbauche();
+            employeExistant.setDateEmbauche(newHireDate);
+            long months = ChronoUnit.MONTHS.between(newHireDate, LocalDate.now());
+            int totalAcquired = (int) months * 2;
+            int usedDays = congeRepository.sumApprovedDaysByTypeAndEmploye(employeExistant.getId(), "Congé Annuel");
+            employeExistant.setSoldeAnnuel(Math.max(0, totalAcquired - usedDays));
+        }
         employeRepository.save(employeExistant);
         return employesMapper.toDto(employeExistant);
 
@@ -99,8 +117,8 @@ public class EmployesServiceImpl implements EmployesService {
             throw new RuntimeException("passwords dont match");
         }
         employe.setPassword(passwordEncoder.encode(requestDto.getNewPassword()));
-
         employe.setFirstLogin(false);
+        employe.setTempPassword(null);
         employeRepository.save(employe);
     }
 
