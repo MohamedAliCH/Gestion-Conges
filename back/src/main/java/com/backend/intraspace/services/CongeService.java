@@ -2,6 +2,7 @@ package com.backend.intraspace.services;
 
 import com.backend.intraspace.dtos.CongeRequestDto;
 import com.backend.intraspace.dtos.CongeResponseDto;
+import com.backend.intraspace.dtos.SoldeCongeDto;
 import java.util.List;
 
 public interface CongeService {
@@ -12,5 +13,6 @@ public interface CongeService {
     List<CongeResponseDto> getPendingLeaves();
     CongeResponseDto approveLeave(Long id);
     CongeResponseDto rejectLeave(Long id, String reason);
+    SoldeCongeDto getSolde(String email);
 }
 
