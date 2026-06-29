@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tâche 5 — Upload Documents RH</title>
+<style>
+  :root {
+    --bg: #0d1117; --surface: #161b22; --border: #30363d;
+    --text: #c9d1d9; --muted: #8b949e; --accent: #58a6ff;
+    --green: #3fb950; --yellow: #d29922; --red: #f85149;
+    --purple: #bc8cff; --orange: #ffa657; --teal: #39d353;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; }
+
+  /* SIDEBAR */
+  nav { width: 280px; min-width: 280px; background: var(--surface); border-right: 1px solid var(--border);
+        position: sticky; top: 0; height: 100vh; overflow-y: auto; padding: 24px 0; }
+  nav h2 { color: var(--accent); font-size: 13px; text-transform: uppercase; letter-spacing: 1px;
+            padding: 0 20px 12px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+  nav a { display: block; padding: 7px 20px; font-size: 13px; color: var(--muted); text-decoration: none;
+          border-left: 3px solid transparent; transition: all .15s; }
+  nav a:hover, nav a.active { color: var(--accent); border-left-color: var(--accent); background: rgba(88,166,255,.07); }
+  nav .section-label { font-size: 11px; text-transform: uppercase; color: #484f58; padding: 14px 20px 4px; letter-spacing: .8px; }
+
+  /* MAIN */
+  main { flex: 1; padding: 40px 48px; max-width: 1100px; }
+  h1 { font-size: 28px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+  .subtitle { color: var(--muted); font-size: 15px; margin-bottom: 36px; }
+  .badges { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 40px; }
+  .badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+  .b-spring { background: #1a3c1a; color: var(--green); }
+  .b-tika   { background: #3a2000; color: var(--orange); }
+  .b-pg     { background: #1a1a3c; color: var(--purple); }
+  .b-jwt    { background: #2a1a1a; color: var(--red); }
+  .b-async  { background: #1a2a3c; color: var(--accent); }
+
+  /* ARCHITECTURE */
+  .arch { background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+          padding: 24px; margin-bottom: 44px; }
+  .arch h3 { color: var(--accent); font-size: 14px; margin-bottom: 16px; }
+  .flow { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 13px; }
+  .flow-box { background: #0d1117; border: 1px solid var(--border); border-radius: 6px;
+              padding: 8px 14px; color: var(--text); }
+  .flow-arrow { color: var(--muted); font-size: 18px; }
+  .flow-box.async { border-color: var(--teal); color: var(--teal); }
+
+  /* FILE SECTIONS */
+  .file-section { margin-bottom: 56px; }
+  .file-header { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+  .file-icon { font-size: 20px; }
+  .file-path { font-size: 13px; color: var(--muted); background: var(--surface);
+               border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px;
+               font-family: 'Cascadia Code', 'Fira Code', monospace; }
+  h2.file-title { font-size: 20px; color: #fff; font-weight: 600; }
+  .file-desc { color: var(--muted); font-size: 14px; margin: 8px 0 18px; line-height: 1.6; }
+
+  /* CODE TABLE */
+  .code-table { width: 100%; border-collapse: collapse; font-family: 'Cascadia Code','Fira Code','Courier New',monospace;
+                font-size: 13px; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); }
+  .code-table thead tr { background: #1c2128; }
+  .code-table thead th { padding: 10px 16px; text-align: left; font-size: 12px; color: var(--muted);
+                          text-transform: uppercase; letter-spacing: .6px; font-family: 'Segoe UI',sans-serif; border-bottom: 1px solid var(--border); }
+  .code-table th.th-line { width: 50px; }
+  .code-table th.th-code { width: 45%; }
+  .code-table th.th-expl { width: 55%; }
+  .code-table tbody tr { border-bottom: 1px solid #21262d; transition: background .1s; }
+  .code-table tbody tr:hover { background: rgba(88,166,255,.04); }
+  .code-table td { padding: 0; vertical-align: top; }
+  .td-line { padding: 6px 12px; color: #484f58; text-align: right; user-select: none;
+             background: #0d1117; min-width: 50px; font-size: 12px; border-right: 1px solid var(--border); }
+  .td-code { padding: 6px 14px; white-space: pre; overflow-x: auto; line-height: 1.55; }
+  .td-expl { padding: 6px 14px 6px 16px; color: #adbac7; font-family: 'Segoe UI',sans-serif;
+             font-size: 13px; line-height: 1.55; border-left: 1px solid var(--border); white-space: normal; }
+  .td-expl .tag { display: inline-block; padding: 1px 7px; border-radius: 4px; font-size: 11px;
+                  font-weight: 600; margin-right: 5px; }
+  .t-annot  { background: #1f2d1f; color: var(--green); }
+  .t-valid  { background: #2d1f1f; color: var(--red); }
+  .t-persist{ background: #1f1f2d; color: var(--purple); }
+  .t-async  { background: #1f2a2d; color: var(--teal); }
+  .t-sec    { background: #2d2a1f; color: var(--yellow); }
+  .t-dto    { background: #2a1f2d; color: var(--orange); }
+  .t-db     { background: #1f2d2d; color: #56d364; }
+
+  /* syntax colors */
+  .kw  { color: #ff7b72; }   /* keyword */
+  .cl  { color: #ffa657; }   /* class name */
+  .an  { color: #3fb950; }   /* annotation */
+  .str { color: #a5d6ff; }   /* string */
+  .num { color: #79c0ff; }   /* number */
+  .cm  { color: #484f58; font-style: italic; }  /* comment */
+  .mt  { color: #d2a8ff; }   /* method */
+  .tp  { color: #ffa657; }   /* type */
+  .fi  { color: #e3b341; }   /* field */
+
+  /* SEPARATOR */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 0 0 44px; }
+
+  /* CHECKLIST */
+  .checklist { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 24px; margin-bottom: 44px; }
+  .checklist h3 { color: var(--accent); font-size: 15px; margin-bottom: 16px; }
+  .checklist ul { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .checklist li { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; line-height: 1.5; color: var(--text); }
+  .checklist li::before { content: '✅'; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ SIDEBAR ═══════════════════ -->
+<nav>
+  <h2>Tâche 5 — Docs RH</h2>
+  <div class="section-label">Interfaces</div>
+  <a href="#doc-service">DocumentService</a>
+  <a href="#rag-service">RagPipelineService</a>
+  <div class="section-label">Entités JPA</div>
+  <a href="#doc-rh">DocumentRH</a>
+  <a href="#doc-chunk">DocumentChunk</a>
+  <div class="section-label">DTOs</div>
+  <a href="#dto">DocumentUploadResponseDto</a>
+  <div class="section-label">Repositories</div>
+  <a href="#repo-doc">DocumentRHRepository</a>
+  <a href="#repo-chunk">DocumentChunkRepository</a>
+  <div class="section-label">Services</div>
+  <a href="#doc-service-impl">DocumentServiceImpl</a>
+  <a href="#rag-impl">RagPipelineServiceImpl</a>
+  <div class="section-label">Controller</div>
+  <a href="#controller">DocumentController</a>
+  <div class="section-label">Configuration</div>
+  <a href="#async-config">AsyncConfig</a>
+  <a href="#security-config">SecurityConfig</a>
+  <div class="section-label">Base de données</div>
+  <a href="#migration">Liquibase — ChangeSet 005</a>
+  <div class="section-label">Dépendances</div>
+  <a href="#pom">pom.xml — Tika</a>
+</nav>
+
+<!-- ═══════════════════ MAIN ═══════════════════ -->
+<main>
+  <h1>Tâche 5 — Upload Documents RH</h1>
+  <p class="subtitle">Documentation complète de tous les fichiers créés et utilisés · Spring Boot · Apache Tika · pgvector · JWT</p>
+
+  <div class="badges">
+    <span class="badge b-spring">Spring Boot 4.1.0</span>
+    <span class="badge b-tika">Apache Tika 2.9.2</span>
+    <span class="badge b-pg">pgvector</span>
+    <span class="badge b-jwt">JWT / ROLE_ADMIN</span>
+    <span class="badge b-async">@Async RAG Pipeline</span>
+  </div>
+
+  <!-- ARCHITECTURE -->
+  <div class="arch">
+    <h3>Flux d'exécution</h3>
+    <div class="flow">
+      <div class="flow-box">Client (Admin)</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">JwtAuthFilter<br><small style="color:var(--muted)">ROLE_ADMIN</small></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">DocumentController<br><small style="color:var(--muted)">POST /upload</small></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">DocumentServiceImpl<br><small style="color:var(--muted)">Tika · validation · disk</small></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">DocumentRHRepository<br><small style="color:var(--muted)">BDD métadonnées</small></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box async">RagPipelineServiceImpl<br><small>@Async — thread séparé</small></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box async">pgvector<br><small>embeddings</small></div>
+    </div>
+  </div>
+
+  <!-- CHECKLIST -->
+  <div class="checklist">
+    <h3>Checklist validée</h3>
+    <ul>
+      <li>POST /api/documents/upload via MultipartFile</li>
+      <li>Validation type fichier PDF / DOCX (Tika)</li>
+      <li>Taille maximale 10 MB</li>
+      <li>Sauvegarde dans uploads/hr-documents/</li>
+      <li>Métadonnées en BDD (nom, chemin, type, date, uploadé par)</li>
+      <li>Pipeline RAG asynchrone (@Async)</li>
+      <li>Chunking + embeddings + pgvector</li>
+      <li>Accessible ROLE_ADMIN uniquement</li>
+      <li>Nom unique avec timestamp</li>
+      <li>Ancien document ré-uploadé : chunks nettoyés</li>
+    </ul>
+  </div>
+
+  <hr class="divider">
+
+  <!-- ══════════════════════════════════════════════
+       1. DocumentService (interface)
+  ══════════════════════════════════════════════ -->
+  <section class="file-section" id="doc-service">
+    <div class="file-header">
+      <span class="file-icon">📄</span>
+      <h2 class="file-title">DocumentService.java</h2>
+    </div>
+    <span class="file-path">services/DocumentService.java</span>
+    <p class="file-desc">Interface contrat du service d'upload. Définit les méthodes publiques sans implémentation — permet l'injection de dépendance et facilite les tests.</p>
+    <table class="code-table">
+      <thead><tr><th class="th-line">Ligne</th><th class="th-code">Code</th><th class="th-expl">Explication</th></tr></thead>
+      <tbody>
+        <tr><td class="td-line">1</td><td class="td-code"><span class="kw">package</span> com.backend.intraspace.services;</td><td class="td-expl">Déclare le package Java du fichier.</td></tr>
+        <tr><td class="td-line">3</td><td class="td-code"><span class="kw">import</span> ...DocumentUploadResponseDto;</td><td class="td-expl">Import du DTO de réponse retourné à l'appelant.</td></tr>
+        <tr><td class="td-line">4</td><td class="td-code"><span class="kw">import</span> ...MultipartFile;</td><td class="td-expl">Import de l'abstraction Spring pour les fichiers envoyés via HTTP multipart/form-data.</td></tr>
+        <tr><td class="td-line">5</td><td class="td-code"><span class="kw">import</span> java.security.Principal;</td><td class="td-expl">Principal représente l'utilisateur authentifié (son email ici via JWT).</td></tr>
+        <tr><td class="td-line">9</td><td class="td-code"><span class="kw">public interface</span> <span class="cl">DocumentService</span> {</td><td class="td-expl"><span class="tag t-annot">Interface</span> Contrat de service. L'implémentation réelle est dans DocumentServiceImpl.</td></tr>
+        <tr><td class="td-line">10</td><td class="td-code">  <span class="cl">DocumentUploadResponseDto</span> <span class="mt">upload</span>(<span class="tp">MultipartFile</span> file, <span class="tp">Principal</span> principal);</td><td class="td-expl">Méthode d'upload : reçoit le fichier et l'identité de l'admin, retourne un DTO de confirmation.</td></tr>
+        <tr><td class="td-line">11</td><td class="td-code">  <span class="tp">List</span>&lt;<span class="cl">DocumentUploadResponseDto</span>&gt; <span class="mt">getAll</span>();</td><td class="td-expl">Méthode pour lister tous les documents uploadés (utilisée par GET /api/documents).</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       2. RagPipelineService (interface)
+  ══════════════════════════════════════════════ -->
+  <section class="file-section" id="rag-service">
+    <div class="file-header">
+      <span class="file-icon">📄</span>
+      <h2 class="file-title">RagPipelineService.java</h2>
+    </div>
+    <span class="file-path">services/RagPipelineService.java</span>
+    <p class="file-desc">Interface du pipeline RAG (Retrieval-Augmented Generation). Sépare le contrat de l'implémentation asynchrone.</p>
+    <table class="code-table">
+      <thead><tr><th class="th-line">Ligne</th><th class="th-code">Code</th><th class="th-expl">Explication</th></tr></thead>
+      <tbody>
+        <tr><td class="td-line">3</td><td class="td-code"><span class="kw">public interface</span> <span class="cl">RagPipelineService</span> {</td><td class="td-expl"><span class="tag t-async">Interface</span> Contrat du pipeline RAG.</td></tr>
+        <tr><td class="td-line">4</td><td class="td-code">  <span class="kw">void</span> <span class="mt">process</span>(<span class="tp">Long</span> documentId, <span class="tp">String</span> filePath);</td><td class="td-expl">Lance le pipeline : extraction texte → chunking → embeddings → stockage pgvector. Appelé de façon asynchrone via @Async dans l'implémentation.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       3. DocumentRH (entité)
+  ══════════════════════════════════════════════ -->
+  <section class="file-section" id="doc-rh">
+    <div class="file-header">
+      <span class="file-icon">🗂️</span>
+      <h2 class="file-title">DocumentRH.java</h2>
+    </div>
+    <span class="file-path">entities/DocumentRH.java</span>
+    <p class="file-desc">Entité JPA mappée sur la table <code style="color:var(--teal)">documents_rh</code>. Stocke toutes les métadonnées d'un document uploadé.</p>
+    <table class="code-table">
+      <thead><tr><th class="th-line">Ligne</th><th class="th-code">Code</th><th class="th-expl">Explication</th></tr></thead>
+      <tbody>
+        <tr><td class="td-line">7</td><td class="td-code"><span class="an">@Entity</span></td><td class="td-expl"><span class="tag t-annot">JPA</span> Marque la classe comme entité persistée en base de données.</td></tr>
+        <tr><td class="td-line">8</td><td class="td-code"><span class="an">@Table</span>(name = <span class="str">"documents_rh"</span>)</td><td class="td-expl">Nomme explicitement la table SQL correspondante.</td></tr>
+        <tr><td class="td-line">9-11</td><td class="td-code"><span class="an">@Getter @Setter @NoArgsConstructor @AllArgsConstructor</span></td><td class="td-expl"><span class="tag t-annot">Lombok</span> Génère automatiquement les getters, setters, constructeur vide et constructeur complet à la compilation.</td></tr>
+        <tr><td class="td-line">14-16</td><td class="td-code"><span class="an">@Id @GeneratedValue</span>(strategy = <span class="cl">IDENTITY</span>)<br><span class="kw">private</span> <span class="tp">Long</span> id;</td><td class="td-expl"><span class="tag t-persist">Clé primaire</span> Auto-incrémentée par PostgreSQL (SERIAL). Identifiant unique de chaque document.</td></tr>
+        <tr><td class="td-line">18-20</td><td class="td-code"><span class="an">@Column</span>(nullable = <span class="kw">false</span>, length = <span class="num">500</span>)<br><span class="kw">private</span> <span class="tp">String</span> nom;</td><td class="td-expl">Nom original du fichier (sans le préfixe timestamp). NOT NULL, max 500 caractères.</td></tr>
+        <tr><td class="td-line">22-24</td><td class="td-code"><span class="an">@Column</span>(name = <span class="str">"chemin_fichier"</span>, length = <span class="num">1000</span>)<br><span class="kw">private</span> <span class="tp">String</span> cheminFichier;</td><td class="td-expl">Chemin absolu sur disque du fichier sauvegardé (ex: /uploads/hr-documents/20260627_rapport.pdf).</td></tr>
+        <tr><td class="td-line">26-28</td><td class="td-code"><span class="an">@Column</span>(name = <span class="str">"type_mime"</span>)<br><span class="kw">private</span> <span class="tp">String</span> typeMime;</td><td class="td-expl">Type MIME détecté par Tika (ex: application/pdf). Stocké pour affichage et filtrage.</td></tr>
+        <tr><td class="td-line">30-32</td><td class="td-code"><span class="kw">private</span> <span class="tp">Long</span> taille;</td><td class="td-expl">Taille en octets du fichier. Permet d'afficher la taille lisible côté frontend.</td></tr>
+        <tr><td class="td-line">34-36</td><td class="td-code"><span class="kw">private</span> <span class="tp">LocalDateTime</span> dateUpload;</td><td class="td-expl">Horodatage précis de l'upload (date + heure), enregistré en UTC.</td></tr>
+        <tr><td class="td-line">38-40</td><td class="td-code"><span class="kw">private</span> <span class="tp">String</span> uploadePar;</td><td class="td-expl">Email de l'admin qui a uploadé le document (extrait du JWT via Principal).</td></tr>
+        <tr><td class="td-line">42-43</td><td class="td-code"><span class="kw">private</span> <span class="tp">String</span> statut;</td><td class="td-expl"><span class="tag t-async">Statut RAG</span> Cycle de vie : <b>UPLOADING</b> → <b>TRAITEMENT</b> → <b>PRET</b> ou <b>ERREUR</b>. Permet de suivre l'état du pipeline.</td></tr>
+        <tr><td class="td-line">45-46</td><td class="td-code"><span class="kw">private</span> <span class="tp">String</span> erreur;</td><td class="td-expl">Message d'erreur éventuel du pipeline RAG. Null quand tout va bien.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       4. DocumentChunk (entité)
+  ══════════════════════════════════════════════ -->
+  <section class="file-section" id="doc-chunk">
+    <div class="file-header">
+      <span class="file-icon">🗂️</span>
+      <h2 class="file-title">DocumentChunk.java</h2>
+    </div>
+    <span class="file-path">entities/DocumentChunk.java</span>
+    <p class="file-desc">Entité JPA mappée sur <code style="color:var(--teal)">document_chunks</code>. Un document est découpé en N chunks de texte, chacun ayant un vecteur d'embedding stocké dans pgvector.</p>
+    <table class="code-table">
+      <thead><tr><th class="th-line">Ligne</th><th class="th-code">Code</th><th class="th-expl">Explication</th></tr></thead>
+      <tbody>
+        <tr><td class="td-line">7</td><td class="td-code"><span class="an">@Entity</span><br><span class="an">@Table</span>(name = <span class="str">"document_chunks"</span>)</td><td class="td-expl">Entité JPA mappée sur la table document_chunks.</td></tr>
+        <tr><td class="td-line">18-21</td><td class="td-code"><span class="an">@ManyToOne</span>(fetch = <span class="cl">LAZY</span>)<br><span class="an">@JoinColumn</span>(name = <span class="str">"document_id"</span>)<br><span class="kw">private</span> <span class="cl">DocumentRH</span> document;</td><td class="td-expl"><span class="tag t-persist">Relation</span> Clé étrangère vers documents_rh. LAZY = le document parent n'est pas chargé sauf si explicitement demandé (performance).</td></tr>
+        <tr><td class="td-line">23-25</td><td class="td-code"><span class="an">@Column</span>(columnDefinition = <span class="str">"TEXT"</span>)<br><span class="kw">private</span> <span class="tp">String</span> contenu;</td><td class="td-expl">Texte brut du chunk (fragment de 500 caractères extrait du document). Stocké en TEXT pour ne pas être limité en taille.</td></tr>
+        <tr><td class="td-line">27-29</td><td class="td-code"><span class="kw">private</span> <span class="kw">int</span> chunkIndex;</td><td class="td-expl">Position ordinale du chunk dans le document (0, 1, 2…). Permet de reconstruire l'ordre lors d'une recherche.</td></tr>
+        <tr><td class="td-line">31</td><td class="td-code"><span class="cm">// embedding (vector) géré via JdbcTemplate</span></td><td class="td-expl"><span class="tag t-db">pgvector</span> La colonne <b>embedding vector(768)</b> n'est pas mappée JPA car le type vector n'est pas supporté nativement. Elle est mise à jour via JdbcTemplate avec du SQL brut.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       5. DocumentUploadResponseDto
+  ══════════════════════════════════════════════ -->
+  <section class="file-section" id="dto">
+    <div class="file-header">
+      <span class="file-icon">📦</span>
+      <h2 class="file-title">DocumentUploadResponseDto.java</h2>
+    </div>
+    <span class="file-path">dtos/DocumentUploadResponseDto.java</span>
+    <p class="file-desc">DTO (Data Transfer Object) retourné au client après un upload réussi. Évite d'exposer directement l'entité JPA.</p>
+    <table class="code-table">
+      <thead><tr><th class="th-line">Ligne</th><th class="th-code">Code</th><th class="th-expl">Explication</th></tr></thead>
+      <tbody>
+        <tr><td class="td-line">9</td><td class="td-code"><span class="an">@Data</span></td><td class="td-expl"><span class="tag t-dto">Lombok</span> Génère getters + setters + equals + hashCode + toString en une seule annotation.</td></tr>
+        <tr><td class="td-line">10</td><td class="td-code"><span class="an">@AllArgsConstructor</span></td><td class="td-expl">Constructeur avec tous les champs — utilisé dans la méthode toDto() du service.</td></tr>
+        <tr><td class="td-line">11</td><td class="td-code"><span class="an">@NoArgsConstructor</span></td><td class="td-expl">Constructeur vide requis par Jackson pour la désérialisation JSON.</td></tr>
+        <tr><td class="td-line">13</td><td class="td-code"><span class="kw">private</span> <span class="tp">Long</span> id;</td><td class="td-expl">ID BDD du document créé.</td></tr>
+        <tr><td class="td-line">14</td><td class="td-code"><span class="kw">private</span> <span class="tp">String</span> nom;</td><td class="td-expl">Nom original du fichier (sans le préfixe timestamp).</td></tr>
+        <tr><td class="td-line">15</td><td class="td-code"><span class="kw">private</span> <span class="tp">String</span> typeMime;</td><td class="td-expl">Type MIME détecté (application/pdf, application/vnd.openxmlformats…).</td></tr>
+        <tr><td class="td-line">16</td><td class="td-code"><span class="kw">private</span> <span class="tp">Long</span> taille;</td><td class="td-expl">Taille en octets — le frontend peut afficher « 2.4 MB ».</td></tr>
+        <tr><td class="td-line">17</td><td class="td-code"><span class="kw">private</span> <span class="tp">LocalDateTime</span> dateUpload;</td><td class="td-expl">Horodatage précis de l'upload.</td></tr>
+        <tr><td class="td-line">18</td><td class="td-code"><span class="kw">private</span> <span class="tp">String</span> uploadePar;</td><td class="td-expl">Email de l'admin uploadeur.</td></tr>
+        <tr><td class="td-line">19</td><td class="td-code"><span class="kw">private</span> <span class="tp">String</span> statut;</td><td class="td-expl">État du pipeline RAG au moment de la réponse (UPLOADING).</td></tr>
+        <tr><td class="td-line">20</td><td class="td-code"><span class="kw">private</span> <span class="tp">String</span> message;</td><td class="td-expl">Message lisible pour l'utilisateur : « Document uploadé. Pipeline RAG en cours… »</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       6. DocumentRHRepository
+  ══════════════════════════════════════════════ -->
+  <section class="file-section" id="repo-doc">
+    <div class="file-header">
+      <span class="file-icon">🗄️</span>
+      <h2 class="file-title">DocumentRHRepository.java</h2>
+    </div>
+    <span class="file-path">repositories/DocumentRHRepository.java</span>
+    <p class="file-desc">Repository Spring Data JPA pour l'entité DocumentRH. Spring génère automatiquement toutes les requêtes SQL à partir des noms de méthodes.</p>
+    <table class="code-table">
+      <thead><tr><th class="th-line">Ligne</th><th class="th-code">Code</th><th class="th-expl">Explication</th></tr></thead>
+      <tbody>
+        <tr><td class="td-line">8</td><td class="td-code"><span class="kw">public interface</span> <span class="cl">DocumentRHRepository</span><br>  <span class="kw">extends</span> <span class="cl">JpaRepository</span>&lt;<span class="cl">DocumentRH</span>, <span class="tp">Long</span>&gt;</td><td class="td-expl"><span class="tag t-persist">JPA</span> Hérite de save(), findById(), findAll(), delete()… — aucune implémentation à écrire.</td></tr>
+        <tr><td class="td-line">10</td><td class="td-code"><span class="tp">List</span>&lt;<span class="cl">DocumentRH</span>&gt; <span class="mt">findAllByOrderByDateUploadDesc</span>();</td><td class="td-expl">Spring dérive : <code>SELECT * FROM documents_rh ORDER BY date_upload DESC</code>. Retourne les documents les plus récents en premier.</td></tr>
+        <tr><td class="td-line">11</td><td class="td-code"><span class="tp">Optional</span>&lt;<span class="cl">DocumentRH</span>&gt; <span class="mt">findByNom</span>(<span class="tp">String</span> nom);</td><td class="td-expl">Permet de vérifier si un document avec ce nom existe déjà (utilisable pour une logique d'écrasement future).</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       7. DocumentChunkRepository
+  ══════════════════════════════════════════════ -->
+  <section class="file-section" id="repo-chunk">
+    <div class="file-header">
+      <span class="file-icon">🗄️</span>
+      <h2 class="file-title">DocumentChunkRepository.java</h2>
+    </div>
+    <span class="file-path">repositories/DocumentChunkRepository.java</span>
+    <p class="file-desc">Repository pour les chunks de texte. Permet de récupérer et supprimer les chunks d'un document donné.</p>
+    <table class="code-table">
+      <thead><tr><th class="th-line">Ligne</th><th class="th-code">Code</th><th class="th-expl">Explication</th></tr></thead>
+      <tbody>
+        <tr><td class="td-line">8</td><td class="td-code"><span class="kw">extends</span> <span class="cl">JpaRepository</span>&lt;<span class="cl">DocumentChunk</span>, <span class="tp">Long</span>&gt;</td><td class="td-expl">Hérite des opérations CRUD standard pour DocumentChunk.</td></tr>
+        <tr><td class="td-line">9</td><td class="td-code"><span class="tp">List</span>&lt;<span class="cl">DocumentChunk</span>&gt; <span class="mt">findByDocumentIdOrderByChunkIndex</span>(<span class="tp">Long</span> documentId);</td><td class="td-expl">Retourne tous les chunks d'un document triés par ordre (chunkIndex ASC). Utile pour la recherche sémantique.</td></tr>
+        <tr><td class="td-line">10</td><td class="td-code"><span class="kw">void</span> <span class="mt">deleteByDocumentId</span>(<span class="tp">Long</span> documentId);</td><td class="td-expl"><span class="tag t-db">Nettoyage</span> Supprime tous les anciens chunks avant re-traitement d'un document ré-uploadé. Spring génère : <code>DELETE FROM document_chunks WHERE document_id = ?</code></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       8. DocumentServiceImpl
+  ══════════════════════════════════════════════ -->
+  <section class="file-section" id="doc-service-impl">
+    <div class="file-header">
+      <span class="file-icon">⚙️</span>
+      <h2 class="file-title">DocumentServiceImpl.java</h2>
+    </div>
+    <span class="file-path">services/Impl/DocumentServiceImpl.java</span>
+    <p class="file-desc">Implémentation principale : validation du fichier (type + taille), sauvegarde sur disque, persistance des métadonnées, déclenchement du pipeline RAG.</p>
+    <table class="code-table">
+      <thead><tr><th class="th-line">Ligne</th><th class="th-code">Code</th><th class="th-expl">Explication</th></tr></thead>
+      <tbody>
+        <tr><td class="td-line">29</td><td class="td-code"><span class="an">@Service @RequiredArgsConstructor @Slf4j</span></td><td class="td-expl"><span class="tag t-annot">Spring</span> @Service = bean géré par Spring. @RequiredArgsConstructor = injection par constructeur des final fields. @Slf4j = génère un logger log.</td></tr>
+        <tr><td class="td-line">31-35</td><td class="td-code"><span class="kw">private static final</span> <span class="tp">Set</span>&lt;<span class="tp">String</span>&gt; ALLOWED_MIME = <span class="cl">Set</span>.of(<br>  <span class="str">"application/pdf"</span>,<br>  <span class="str">"application/vnd.openxmlformats-..."</span>,<br>  <span class="str">"application/msword"</span><br>);</td><td class="td-expl"><span class="tag t-valid">Validation</span> Whitelist des MIME types autorisés : PDF, DOCX (Office Open XML) et DOC (ancien format Word). Set.of() est immuable et thread-safe.</td></tr>
+        <tr><td class="td-line">36</td><td class="td-code"><span class="kw">private static final long</span> MAX_SIZE_BYTES = <span class="num">10L</span> * <span class="num">1024</span> * <span class="num">1024</span>;</td><td class="td-expl"><span class="tag t-valid">Validation</span> Limite de 10 MB en octets (10 × 1024 × 1024 = 10 485 760). Le suffixe L force le calcul en long pour éviter l'overflow int.</td></tr>
+        <tr><td class="td-line">42</td><td class="td-code"><span class="an">@Value</span>(<span class="str">"${app.upload.dir:uploads/hr-documents}"</span>)<br><span class="kw">private</span> <span class="tp">String</span> uploadDir;</td><td class="td-expl">Lit le chemin d'upload depuis application.properties. La valeur après « : » est le défaut si la propriété est absente.</td></tr>
+        <tr><td class="td-line">45</td><td class="td-code"><span class="kw">private final</span> <span class="cl">Tika</span> tika = <span class="kw">new</span> <span class="cl">Tika</span>();</td><td class="td-expl"><span class="tag t-valid">Apache Tika</span> Instance de Tika pour la détection de type MIME. Tika analyse le contenu binaire (magic bytes), pas seulement l'extension — protection contre les fichiers renommés.</td></tr>
+        <tr><td class="td-line">49-51</td><td class="td-code"><span class="kw">if</span> (file == <span class="kw">null</span> || file.<span class="mt">isEmpty</span>())<br>  <span class="kw">throw new</span> <span class="cl">RuntimeException</span>(<span class="str">"Fichier vide..."</span>);</td><td class="td-expl"><span class="tag t-valid">Garde</span> Vérifie que le fichier existe et n'est pas vide avant tout traitement.</td></tr>
+        <tr><td class="td-line">54-57</td><td class="td-code"><span class="kw">if</span> (file.<span class="mt">getSize</span>() &gt; MAX_SIZE_BYTES)<br>  <span class="kw">throw new</span> <span class="cl">RuntimeException</span>(<span class="str">"Fichier trop volumineux..."</span>);</td><td class="td-expl"><span class="tag t-valid">Taille</span> Compare la taille réelle du fichier (en octets) à la limite de 10 MB.</td></tr>
+        <tr><td class="td-line">59-67</td><td class="td-code">mimeType = tika.<span class="mt">detect</span>(file.<span class="mt">getInputStream</span>(), file.<span class="mt">getOriginalFilename</span>());<br><span class="kw">if</span> (!ALLOWED_MIME.<span class="mt">contains</span>(mimeType)) <span class="kw">throw</span>...</td><td class="td-expl"><span class="tag t-valid">MIME Tika</span> Tika lit les premiers octets du stream (magic bytes) pour identifier le vrai type. Passer aussi le nom aide Tika en cas d'ambiguïté. Exception si le type n'est pas dans la whitelist.</td></tr>
+        <tr><td class="td-line">70-73</td><td class="td-code"><span class="tp">String</span> originalName = <span class="mt">sanitize</span>(file.<span class="mt">getOriginalFilename</span>());<br><span class="tp">String</span> timestamp = <span class="cl">LocalDateTime</span>.<span class="mt">now</span>().<span class="mt">format</span>(...);<br><span class="tp">String</span> storedName = timestamp + <span class="str">"_"</span> + originalName;</td><td class="td-expl">Construit un nom de fichier unique sur disque : <b>20260627_143022_rapport.pdf</b>. Évite les collisions même si deux admins uploadent le même fichier simultanément.</td></tr>
+        <tr><td class="td-line">75-88</td><td class="td-code"><span class="cl">Files</span>.<span class="mt">createDirectories</span>(uploadPath);<br>file.<span class="mt">transferTo</span>(destination.<span class="mt">toFile</span>());</td><td class="td-expl"><span class="tag t-persist">Disque</span> Crée récursivement le dossier s'il n'existe pas, puis écrit le fichier sur disque. transferTo() est efficace car évite de tout charger en mémoire.</td></tr>
+        <tr><td class="td-line">91-99</td><td class="td-code">doc.<span class="mt">setStatut</span>(<span class="str">"UPLOADING"</span>);<br>doc = documentRHRepository.<span class="mt">save</span>(doc);</td><td class="td-expl"><span class="tag t-persist">BDD</span> Construit et persiste l'entité DocumentRH avec toutes les métadonnées. Statut initial = UPLOADING car le RAG n'a pas encore démarré.</td></tr>
+        <tr><td class="td-line">102</td><td class="td-code">ragPipelineService.<span class="mt">process</span>(doc.<span class="mt">getId</span>(), destination.<span class="mt">toString</span>());</td><td class="td-expl"><span class="tag t-async">@Async</span> Déclenche le pipeline RAG. L'appel retourne immédiatement car la méthode est @Async — le traitement se fait dans un thread séparé (ragExecutor).</td></tr>
+        <tr><td class="td-line">125-128</td><td class="td-code"><span class="kw">private</span> <span class="tp">String</span> <span class="mt">sanitize</span>(<span class="tp">String</span> filename) {<br>  <span class="kw">return</span> filename.<span class="mt">replaceAll</span>(<span class="str">"[^a-zA-Z0-9._\\-]"</span>, <span class="str">"_"</span>);<br>}</td><td class="td-expl">Nettoie le nom de fichier : remplace tout caractère dangereux (espaces, accents, /, …) par _ pour éviter les path traversal et problèmes de filesystem.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       9. RagPipelineServiceImpl
+  ══════════════════════════════════════════════ -->
+  <section class="file-section" id="rag-impl">
+    <div class="file-header">
+      <span class="file-icon">🤖</span>
+      <h2 class="file-title">RagPipelineServiceImpl.java</h2>
+    </div>
+    <span class="file-path">services/Impl/RagPipelineServiceImpl.java</span>
+    <p class="file-desc">Cœur du pipeline RAG : extrait le texte du document (Tika), le découpe en chunks, appelle l'API d'embeddings (Ollama), et stocke les vecteurs dans pgvector.</p>
+    <table class="code-table">
+      <thead><tr><th class="th-line">Ligne</th><th class="th-code">Code</th><th class="th-expl">Explication</th></tr></thead>
+      <tbody>
+        <tr><td class="td-line">40</td><td class="td-code"><span class="an">@Value</span>(<span class="str">"${rag.embedding.url:http://localhost:11434/api/embeddings}"</span>)</td><td class="td-expl">URL de l'API d'embeddings. Par défaut : Ollama local (port 11434). Configurable dans application.properties pour changer de provider.</td></tr>
+        <tr><td class="td-line">44</td><td class="td-code"><span class="an">@Value</span>(<span class="str">"${rag.embedding.model:nomic-embed-text}"</span>)</td><td class="td-expl">Modèle d'embedding utilisé. nomic-embed-text produit des vecteurs de 768 dimensions — cohérent avec la colonne <code>vector(768)</code> en BDD.</td></tr>
+        <tr><td class="td-line">47-50</td><td class="td-code">chunkSize = <span class="num">500</span>; chunkOverlap = <span class="num">50</span>;</td><td class="td-expl">Taille d'un chunk en caractères (500) et chevauchement entre chunks (50). Le overlap évite de couper une phrase en plein milieu entre deux chunks.</td></tr>
+        <tr><td class="td-line">55</td><td class="td-code"><span class="an">@Override</span><br><span class="an">@Async</span>(<span class="str">"ragExecutor"</span>)<br><span class="kw">public void</span> <span class="mt">process</span>(<span class="tp">Long</span> documentId, <span class="tp">String</span> filePath)</td><td class="td-expl"><span class="tag t-async">@Async</span> Spring exécute cette méthode dans le thread pool « ragExecutor » (défini dans AsyncConfig). L'appelant (DocumentService) n'est pas bloqué.</td></tr>
+        <tr><td class="td-line">59-61</td><td class="td-code">doc.<span class="mt">setStatut</span>(<span class="str">"TRAITEMENT"</span>);<br>documentRHRepository.<span class="mt">save</span>(doc);</td><td class="td-expl">Passe le statut à TRAITEMENT dès le début du pipeline — le frontend peut afficher un indicateur de progression.</td></tr>
+        <tr><td class="td-line">63-68</td><td class="td-code"><span class="tp">String</span> text = <span class="mt">extractText</span>(filePath);<br><span class="kw">if</span> (text.<span class="mt">isBlank</span>()) <span class="kw">throw</span>...</td><td class="td-expl">Extrait le texte brut du document. Si le document est vide (PDF scanné sans OCR par exemple), on lance une exception → statut ERREUR.</td></tr>
+        <tr><td class="td-line">71</td><td class="td-code"><span class="tp">List</span>&lt;<span class="tp">String</span>&gt; chunks = <span class="mt">chunkText</span>(text);</td><td class="td-expl">Découpe le texte en fragments de 500 caractères avec 50 de chevauchement.</td></tr>
+        <tr><td class="td-line">75</td><td class="td-code">documentChunkRepository.<span class="mt">deleteByDocumentId</span>(documentId);</td><td class="td-expl"><span class="tag t-db">Nettoyage</span> Supprime les anciens chunks si le document est ré-uploadé. Évite des doublons de vecteurs en base.</td></tr>
+        <tr><td class="td-line">78-93</td><td class="td-code"><span class="kw">for</span> (<span class="kw">int</span> i = <span class="num">0</span>; i &lt; chunks.<span class="mt">size</span>(); i++) {<br>  chunk = documentChunkRepository.<span class="mt">save</span>(chunk);<br>  <span class="kw">float</span>[] embedding = <span class="mt">callEmbeddingApi</span>(chunkText);<br>  <span class="mt">storeEmbedding</span>(chunk.<span class="mt">getId</span>(), embedding);<br>}</td><td class="td-expl">Pour chaque chunk : 1) persistance en BDD, 2) appel API embeddings, 3) stockage du vecteur. L'échec d'un embedding est non-bloquant (warn + continue).</td></tr>
+        <tr><td class="td-line">96-98</td><td class="td-code">doc.<span class="mt">setStatut</span>(<span class="str">"PRET"</span>);<br>doc.<span class="mt">setErreur</span>(<span class="kw">null</span>);</td><td class="td-expl">Pipeline terminé avec succès : statut PRET, erreur effacée. Le document est maintenant interrogeable via recherche sémantique.</td></tr>
+        <tr><td class="td-line">111-120</td><td class="td-code"><span class="kw">private</span> <span class="tp">String</span> <span class="mt">extractText</span>(<span class="tp">String</span> filePath) {<br>  <span class="cl">AutoDetectParser</span> parser = <span class="kw">new</span> <span class="cl">AutoDetectParser</span>();<br>  <span class="cl">BodyContentHandler</span> handler = <span class="kw">new</span> <span class="cl">BodyContentHandler</span>(<span class="num">-1</span>);<br>  parser.<span class="mt">parse</span>(stream, handler, metadata, context);<br>}</td><td class="td-expl"><span class="tag t-annot">Tika</span> AutoDetectParser choisit automatiquement le bon parser (PDFParser ou OfficeParser) selon le fichier. handler(-1) = pas de limite de taille pour l'extraction.</td></tr>
+        <tr><td class="td-line">124-136</td><td class="td-code"><span class="kw">while</span> (start &lt; text.<span class="mt">length</span>()) {<br>  end = Math.<span class="mt">min</span>(start + chunkSize, text.<span class="mt">length</span>());<br>  start += chunkSize - chunkOverlap;<br>}</td><td class="td-expl">Sliding window chunking. Avance de (500 - 50) = 450 caractères à chaque itération, gardant 50 caractères de contexte commun entre chunks consécutifs.</td></tr>
+        <tr><td class="td-line">141-150</td><td class="td-code"><span class="cl">Map</span>&lt;<span class="tp">String</span>, <span class="tp">String</span>&gt; request = <span class="cl">Map</span>.<span class="mt">of</span>(<span class="str">"model"</span>, embeddingModel, <span class="str">"prompt"</span>, text);<br><span class="cl">Map</span>&lt;...&gt; response = restTemplate.<span class="mt">postForObject</span>(embeddingUrl, request, <span class="cl">Map</span>.<span class="kw">class</span>);</td><td class="td-expl">Appel HTTP POST vers Ollama. Le body JSON est <code>{"model":"nomic-embed-text","prompt":"..."}</code>. La réponse contient une liste de doubles (le vecteur).</td></tr>
+        <tr><td class="td-line">155-163</td><td class="td-code"><span class="tp">String</span> vectorStr = <span class="str">"["</span> + <span class="cl">IntStream</span>.<span class="mt">range</span>(<span class="num">0</span>, embedding.length)<br>  .<span class="mt">mapToObj</span>(...).<span class="mt">collect</span>(<span class="cl">Collectors</span>.<span class="mt">joining</span>(<span class="str">","</span>)) + <span class="str">"]"</span>;<br>jdbcTemplate.<span class="mt">update</span>(<span class="str">"UPDATE document_chunks SET embedding = CAST(? AS vector) WHERE id = ?"</span>, vectorStr, chunkId);</td><td class="td-expl"><span class="tag t-db">pgvector</span> Convertit le float[] en string au format pgvector <code>[0.12,0.34,…]</code>, puis met à jour la colonne via SQL brut. CAST(? AS vector) est nécessaire car JPA ne connaît pas le type vector.</td></tr>
+        <tr><td class="td-line">101-106</td><td class="td-code"><span class="kw">catch</span> (<span class="cl">Exception</span> e) {<br>  doc.<span class="mt">setStatut</span>(<span class="str">"ERREUR"</span>);<br>  doc.<span class="mt">setErreur</span>(e.<span class="mt">getMessage</span>());<br>}</td><td class="td-expl">En cas d'erreur non récupérée : statut ERREUR + message stocké en BDD. L'admin peut voir l'erreur via GET /api/documents.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       10. DocumentController
+  ══════════════════════════════════════════════ -->
+  <section class="file-section" id="controller">
+    <div class="file-header">
+      <span class="file-icon">🌐</span>
+      <h2 class="file-title">DocumentController.java</h2>
+    </div>
+    <span class="file-path">controller/DocumentController.java</span>
+    <p class="file-desc">Point d'entrée HTTP. Expose POST /api/documents/upload et GET /api/documents. Délègue toute la logique au service.</p>
+    <table class="code-table">
+      <thead><tr><th class="th-line">Ligne</th><th class="th-code">Code</th><th class="th-expl">Explication</th></tr></thead>
+      <tbody>
+        <tr><td class="td-line">13</td><td class="td-code"><span class="an">@RestController</span></td><td class="td-expl">Combine @Controller + @ResponseBody : chaque méthode retourne du JSON directement (sérialisé par Jackson).</td></tr>
+        <tr><td class="td-line">14</td><td class="td-code"><span class="an">@RequestMapping</span>(<span class="str">"/api/documents"</span>)</td><td class="td-expl">Préfixe commun pour toutes les routes de ce controller. La sécurité sur /api/documents/** est définie dans SecurityConfig.</td></tr>
+        <tr><td class="td-line">15</td><td class="td-code"><span class="an">@RequiredArgsConstructor</span></td><td class="td-expl">Génère un constructeur injectant DocumentService — pattern recommandé avec Spring (injection par constructeur, pas @Autowired).</td></tr>
+        <tr><td class="td-line">26</td><td class="td-code"><span class="an">@PostMapping</span>(<span class="str">"/upload"</span>)</td><td class="td-expl">Mappe les requêtes HTTP POST vers /api/documents/upload.</td></tr>
+        <tr><td class="td-line">27-31</td><td class="td-code"><span class="kw">public</span> <span class="cl">ResponseEntity</span>&lt;<span class="cl">DocumentUploadResponseDto</span>&gt; <span class="mt">upload</span>(<br>  <span class="an">@RequestParam</span>(<span class="str">"file"</span>) <span class="cl">MultipartFile</span> file,<br>  <span class="cl">Principal</span> principal)</td><td class="td-expl"><span class="tag t-annot">Paramètres</span> @RequestParam("file") lit le fichier du formulaire multipart. Principal est injecté automatiquement par Spring Security depuis le JWT décodé.</td></tr>
+        <tr><td class="td-line">30</td><td class="td-code"><span class="cl">DocumentUploadResponseDto</span> response = documentService.<span class="mt">upload</span>(file, principal);</td><td class="td-expl">Délègue entièrement au service — le controller ne contient aucune logique métier.</td></tr>
+        <tr><td class="td-line">31</td><td class="td-code"><span class="kw">return</span> <span class="cl">ResponseEntity</span>.<span class="mt">ok</span>(response);</td><td class="td-expl">Retourne HTTP 200 avec le DTO sérialisé en JSON.</td></tr>
+        <tr><td class="td-line">34-36</td><td class="td-code"><span class="an">@GetMapping</span><br><span class="kw">public</span> <span class="cl">ResponseEntity</span>&lt;<span class="tp">List</span>&lt;<span class="cl">DocumentUploadResponseDto</span>&gt;&gt; <span class="mt">list</span>()</td><td class="td-expl">GET /api/documents — retourne la liste de tous les documents triés par date décroissante. Aussi protégé ROLE_ADMIN.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       11. AsyncConfig
+  ══════════════════════════════════════════════ -->
+  <section class="file-section" id="async-config">
+    <div class="file-header">
+      <span class="file-icon">⚡</span>
+      <h2 class="file-title">AsyncConfig.java</h2>
+    </div>
+    <span class="file-path">config/AsyncConfig.java</span>
+    <p class="file-desc">Configuration du thread pool dédié au pipeline RAG. @Async sans configuration = thread pool partagé et non contrôlé — ici on isole le RAG dans son propre executor.</p>
+    <table class="code-table">
+      <thead><tr><th class="th-line">Ligne</th><th class="th-code">Code</th><th class="th-expl">Explication</th></tr></thead>
+      <tbody>
+        <tr><td class="td-line">11</td><td class="td-code"><span class="an">@Configuration</span></td><td class="td-expl">Indique à Spring que cette classe déclare des beans à enregistrer dans le contexte.</td></tr>
+        <tr><td class="td-line">12</td><td class="td-code"><span class="an">@EnableAsync</span></td><td class="td-expl"><span class="tag t-async">Critique</span> Active le support de @Async dans toute l'application. Sans cette annotation, @Async est silencieusement ignoré et le code s'exécute de façon synchrone.</td></tr>
+        <tr><td class="td-line">14</td><td class="td-code"><span class="an">@Bean</span>(name = <span class="str">"ragExecutor"</span>)</td><td class="td-expl">Déclare un bean Executor nommé « ragExecutor ». C'est ce nom que @Async("ragExecutor") référence dans RagPipelineServiceImpl.</td></tr>
+        <tr><td class="td-line">16</td><td class="td-code">executor.<span class="mt">setCorePoolSize</span>(<span class="num">2</span>);</td><td class="td-expl">2 threads toujours actifs. Permet de traiter 2 documents en parallèle sans délai.</td></tr>
+        <tr><td class="td-line">17</td><td class="td-code">executor.<span class="mt">setMaxPoolSize</span>(<span class="num">4</span>);</td><td class="td-expl">En cas de pic, jusqu'à 4 threads peuvent être créés.</td></tr>
+        <tr><td class="td-line">18</td><td class="td-code">executor.<span class="mt">setQueueCapacity</span>(<span class="num">50</span>);</td><td class="td-expl">File d'attente de 50 tâches si les 4 threads sont occupés. Au-delà, une exception RejectedExecutionException est levée.</td></tr>
+        <tr><td class="td-line">19</td><td class="td-code">executor.<span class="mt">setThreadNamePrefix</span>(<span class="str">"rag-pipeline-"</span>);</td><td class="td-expl">Préfixe des noms de threads (rag-pipeline-1, rag-pipeline-2…). Facilite le debugging dans les logs.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       12. SecurityConfig (extrait)
+  ══════════════════════════════════════════════ -->
+  <section class="file-section" id="security-config">
+    <div class="file-header">
+      <span class="file-icon">🔒</span>
+      <h2 class="file-title">SecurityConfig.java</h2>
+    </div>
+    <span class="file-path">config/SecurityConfig.java</span>
+    <p class="file-desc">Configuration Spring Security. La règle critique pour cette tâche est la ligne qui restreint /api/documents/** à ROLE_ADMIN.</p>
+    <table class="code-table">
+      <thead><tr><th class="th-line">Ligne</th><th class="th-code">Code</th><th class="th-expl">Explication</th></tr></thead>
+      <tbody>
+        <tr><td class="td-line">26</td><td class="td-code"><span class="an">@EnableWebSecurity</span></td><td class="td-expl">Active la configuration de sécurité Web de Spring Security.</td></tr>
+        <tr><td class="td-line">35</td><td class="td-code">.cors(cors -> cors.<span class="mt">configurationSource</span>(...))</td><td class="td-expl">Active CORS — nécessaire pour que le frontend React (port 3001) puisse appeler le backend (port 8080).</td></tr>
+        <tr><td class="td-line">36</td><td class="td-code">.csrf(csrf -> csrf.<span class="mt">disable</span>())</td><td class="td-expl">CSRF désactivé car l'API est stateless (JWT). CSRF protège les sessions cookie — inutile ici.</td></tr>
+        <tr><td class="td-line">37-38</td><td class="td-code">.<span class="mt">sessionManagement</span>(...<span class="cl">STATELESS</span>)</td><td class="td-expl">Pas de session HTTP côté serveur — chaque requête doit porter son JWT.</td></tr>
+        <tr><td class="td-line">39</td><td class="td-code">.<span class="mt">requestMatchers</span>(<span class="str">"/api/auth/**"</span>).<span class="mt">permitAll</span>()</td><td class="td-expl">Login et change-password sont publics (pas de JWT requis).</td></tr>
+        <tr><td class="td-line">41</td><td class="td-code">.<span class="mt">requestMatchers</span>(<span class="str">"/api/admin/**"</span>).<span class="mt">hasAuthority</span>(<span class="str">"ROLE_ADMIN"</span>)</td><td class="td-expl">Toutes les routes admin nécessitent ROLE_ADMIN dans le JWT.</td></tr>
+        <tr><td class="td-line">42</td><td class="td-code">.<span class="mt">requestMatchers</span>(<span class="str">"/api/documents/**"</span>).<span class="mt">hasAuthority</span>(<span class="str">"ROLE_ADMIN"</span>)</td><td class="td-expl"><span class="tag t-sec">Sécurité</span> Règle clé de cette tâche : l'upload (et la liste) de documents est réservé aux administrateurs. Un employé qui tente d'accéder reçoit HTTP 401.</td></tr>
+        <tr><td class="td-line">50</td><td class="td-code">.<span class="mt">addFilterBefore</span>(jwtAuthFilter, <span class="cl">UsernamePasswordAuthenticationFilter</span>.<span class="kw">class</span>)</td><td class="td-expl">Insère le filtre JWT avant le filtre d'authentification classique. JwtAuthFilter décode le token et injecte l'utilisateur dans le contexte de sécurité.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       13. Migration Liquibase — ChangeSet 005
+  ══════════════════════════════════════════════ -->
+  <section class="file-section" id="migration">
+    <div class="file-header">
+      <span class="file-icon">🗃️</span>
+      <h2 class="file-title">db.changelog-master.xml — ChangeSet 005</h2>
+    </div>
+    <span class="file-path">resources/db/changelog/db.changelog-master.xml</span>
+    <p class="file-desc">Migration Liquibase qui crée toute l'infrastructure BDD pour les documents : extension pgvector, table métadonnées, table chunks avec colonne vecteur et index de similarité.</p>
+    <table class="code-table">
+      <thead><tr><th class="th-line">Ligne</th><th class="th-code">Code</th><th class="th-expl">Explication</th></tr></thead>
+      <tbody>
+        <tr><td class="td-line">137</td><td class="td-code">&lt;changeSet id=<span class="str">"005-documents-rag"</span> author=<span class="str">"ai"</span>&gt;</td><td class="td-expl"><span class="tag t-db">Liquibase</span> L'id est unique et versionné. Liquibase n'exécute ce changeset qu'une seule fois, puis le marque comme appliqué dans la table databasechangelog.</td></tr>
+        <tr><td class="td-line">139</td><td class="td-code">&lt;sql&gt;CREATE EXTENSION IF NOT EXISTS vector;&lt;/sql&gt;</td><td class="td-expl"><span class="tag t-db">pgvector</span> Installe l'extension pgvector dans PostgreSQL. IF NOT EXISTS = idempotent, pas d'erreur si déjà installée. Prérequis : pgvector doit être disponible sur le serveur.</td></tr>
+        <tr><td class="td-line">142-168</td><td class="td-code">&lt;createTable tableName=<span class="str">"documents_rh"</span>&gt;</td><td class="td-expl">Crée la table des métadonnées : id (PK), nom, chemin_fichier, type_mime, taille, date_upload, uploade_par, statut, erreur.</td></tr>
+        <tr><td class="td-line">171-188</td><td class="td-code">&lt;createTable tableName=<span class="str">"document_chunks"</span>&gt;</td><td class="td-expl">Crée la table des chunks avec FK vers documents_rh. Colonnes : id, document_id (FK), contenu (TEXT), chunk_index.</td></tr>
+        <tr><td class="td-line">190</td><td class="td-code">&lt;sql&gt;ALTER TABLE document_chunks ADD COLUMN IF NOT EXISTS embedding <span class="kw">vector</span>(<span class="num">768</span>);&lt;/sql&gt;</td><td class="td-expl"><span class="tag t-db">pgvector</span> Ajoute la colonne embedding de type vector(768). 768 dimensions = taille des vecteurs du modèle nomic-embed-text. Impossible via createTable Liquibase standard (type custom).</td></tr>
+        <tr><td class="td-line">193</td><td class="td-code">&lt;sql&gt;CREATE INDEX IF NOT EXISTS idx_chunks_embedding ON document_chunks USING <span class="kw">ivfflat</span> (embedding <span class="kw">vector_cosine_ops</span>) WITH (lists = <span class="num">100</span>);&lt;/sql&gt;</td><td class="td-expl"><span class="tag t-db">Index ANN</span> Index IVFFlat (Inverted File Flat) pour la recherche approximative des plus proches voisins. vector_cosine_ops = similarité cosinus. lists=100 = 100 partitions pour la recherche rapide.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       14. pom.xml — dépendances Tika
+  ══════════════════════════════════════════════ -->
+  <section class="file-section" id="pom">
+    <div class="file-header">
+      <span class="file-icon">📦</span>
+      <h2 class="file-title">pom.xml — Dépendances Apache Tika</h2>
+    </div>
+    <span class="file-path">back/pom.xml</span>
+    <p class="file-desc">Deux artefacts Maven ajoutés pour cette tâche : tika-core (détection MIME) et tika-parsers-standard-package (extraction de texte PDF + DOCX).</p>
+    <table class="code-table">
+      <thead><tr><th class="th-line">Ligne</th><th class="th-code">Code</th><th class="th-expl">Explication</th></tr></thead>
+      <tbody>
+        <tr><td class="td-line">103-107</td><td class="td-code">&lt;dependency&gt;<br>  &lt;groupId&gt;org.apache.tika&lt;/groupId&gt;<br>  &lt;artifactId&gt;tika-core&lt;/artifactId&gt;<br>  &lt;version&gt;2.9.2&lt;/version&gt;<br>&lt;/dependency&gt;</td><td class="td-expl"><span class="tag t-annot">Tika Core</span> Fournit la classe Tika et la détection MIME légère. Utilisé dans DocumentServiceImpl pour <code>tika.detect()</code> — vérifie le vrai type du fichier par analyse des magic bytes.</td></tr>
+        <tr><td class="td-line">108-112</td><td class="td-code">&lt;dependency&gt;<br>  &lt;groupId&gt;org.apache.tika&lt;/groupId&gt;<br>  &lt;artifactId&gt;tika-parsers-standard-package&lt;/artifactId&gt;<br>  &lt;version&gt;2.9.2&lt;/version&gt;<br>&lt;/dependency&gt;</td><td class="td-expl"><span class="tag t-annot">Tika Parsers</span> Inclut tous les parsers standard : PDFParser (via PDFBox), OfficeParser (pour .docx via Apache POI), etc. Utilisé dans RagPipelineServiceImpl pour <code>AutoDetectParser</code> qui extrait le texte.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <hr class="divider">
+  <p style="color:var(--muted);font-size:13px;text-align:center;padding-bottom:40px;">
+    IntraSpace — Tâche 5 · Upload Documents RH · Spring Boot 4.1.0 · Apache Tika 2.9.2 · pgvector · JWT
+  </p>
+</main>
+
+<script>
+  // Active nav link on scroll
+  const sections = document.querySelectorAll('.file-section');
+  const links = document.querySelectorAll('nav a');
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const link = document.querySelector('nav a[href="#' + e.target.id + '"]');
+        if (link) link.classList.add('active');
+      }
+    });
+  }, { threshold: 0.3 });
+  sections.forEach(s => obs.observe(s));
+</script>
+</body>
+</html>
