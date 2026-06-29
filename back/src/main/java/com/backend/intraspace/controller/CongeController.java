@@ -2,6 +2,7 @@ package com.backend.intraspace.controller;
 
 import com.backend.intraspace.dtos.CongeRequestDto;
 import com.backend.intraspace.dtos.CongeResponseDto;
+import com.backend.intraspace.dtos.SoldeCongeDto;
 import com.backend.intraspace.services.CongeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +17,13 @@ import java.util.List;
 public class CongeController {
 
     private final CongeService congeService;
+
+    @GetMapping("/solde")
+    public ResponseEntity<SoldeCongeDto> getSolde(Principal principal) {
+        String email = principal.getName();
+        SoldeCongeDto solde = congeService.getSolde(email);
+        return ResponseEntity.ok(solde);
+    }
 
     @PostMapping
     public ResponseEntity<CongeResponseDto> requestLeave(@RequestBody CongeRequestDto requestDto, Principal principal) {
@@ -38,3 +46,4 @@ public class CongeController {
         return ResponseEntity.noContent().build();
     }
 }
+

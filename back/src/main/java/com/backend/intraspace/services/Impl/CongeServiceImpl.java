@@ -11,8 +11,10 @@ import com.backend.intraspace.services.CongeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import com.backend.intraspace.dtos.SoldeCongeDto;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -165,6 +167,62 @@ public class CongeServiceImpl implements CongeService {
             employe.setSoldeMaladie(employe.getSoldeMaladie() + conge.getDays());
             employeRepository.save(employe);
         }
+    }
+
+    @Override
+    public SoldeCongeDto getSolde(String email) {
+        Employe employe = employeRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Employé non trouvé"));
+
+        List<Conge> conges = congeRepository.findByEmployeEmailOrderByDateDebutDesc(email);
+
+        // --- Congé Annuel ---
+        int restantAnnuel = employe.getSoldeAnnuel();
+        int utilisesAnnuel = conges.stream()
+                .filter(c -> "Congé Annuel".equals(c.getType()) && "Approuvé".equals(c.getStatus()))
+                .mapToInt(Conge::getDays)
+                .sum();
+        int enCoursAnnuel = conges.stream()
+                .filter(c -> "Congé Annuel".equals(c.getType()) && "En attente".equals(c.getStatus()))
+                .mapToInt(Conge::getDays)
+                .sum();
+        int acquisAnnuel = restantAnnuel + utilisesAnnuel + enCoursAnnuel;
+
+        // --- Congé Maladie ---
+        int restantMaladie = employe.getSoldeMaladie();
+        int utilisesMaladie = conges.stream()
+                .filter(c -> "Congé Maladie".equals(c.getType()) && "Approuvé".equals(c.getStatus()))
+                .mapToInt(Conge::getDays)
+                .sum();
+        int enCoursMaladie = conges.stream()
+                .filter(c -> "Congé Maladie".equals(c.getType()) && "En attente".equals(c.getStatus()))
+                .mapToInt(Conge::getDays)
+                .sum();
+        int acquisMaladie = restantMaladie + utilisesMaladie + enCoursMaladie;
+
+        // --- Congé Sans Solde ---
+        int utilisesSansSolde = conges.stream()
+                .filter(c -> "Congé Sans Solde".equals(c.getType()) && "Approuvé".equals(c.getStatus()))
+                .mapToInt(Conge::getDays)
+                .sum();
+        int enCoursSansSolde = conges.stream()
+                .filter(c -> "Congé Sans Solde".equals(c.getType()) && "En attente".equals(c.getStatus()))
+                .mapToInt(Conge::getDays)
+                .sum();
+
+        // --- Totaux ---
+        int totalAcquis = acquisAnnuel + acquisMaladie;
+        int totalUtilises = utilisesAnnuel + utilisesMaladie;
+        int enCours = enCoursAnnuel + enCoursMaladie + enCoursSansSolde;
+        int soldeGlobal = restantAnnuel + restantMaladie;
+
+        // Construction des détails par type
+        List<SoldeCongeDto.SoldeParType> details = new ArrayList<>();
+        details.add(new SoldeCongeDto.SoldeParType("Congé Annuel", acquisAnnuel, utilisesAnnuel, restantAnnuel));
+        details.add(new SoldeCongeDto.SoldeParType("Congé Maladie", acquisMaladie, utilisesMaladie, restantMaladie));
+        details.add(new SoldeCongeDto.SoldeParType("Congé Sans Solde", 0, utilisesSansSolde, 0));
+
+        return new SoldeCongeDto(soldeGlobal, totalAcquis, totalUtilises, enCours, details);
     }
 
 }
