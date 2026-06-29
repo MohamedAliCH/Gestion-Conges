@@ -7,6 +7,7 @@ import com.backend.intraspace.entities.Employe;
 import com.backend.intraspace.mappers.EmployesMapper;
 import com.backend.intraspace.repositories.CongeRepository;
 import com.backend.intraspace.repositories.EmployeRepository;
+import com.backend.intraspace.services.EmailService;
 import com.backend.intraspace.services.EmployesService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -25,7 +26,7 @@ public class EmployesServiceImpl implements EmployesService {
     private final CongeRepository congeRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmployesMapper employesMapper;
-
+    private final EmailService emailService;
     public EmployeResponseDto createEmploye(EmployeRequestDto employeRequestDto){
         if(employeRepository.existsByEmail(employeRequestDto.getEmail())) {
             throw new RuntimeException("Email déjà utilisé");
@@ -52,13 +53,8 @@ public class EmployesServiceImpl implements EmployesService {
         employe.setSoldeAnnuel((int) monthsWorked * 2);
         employeRepository.save(employe);
         
-        // Simulating sending email
-        System.out.println("==========================================================");
-        System.out.println("Email envoyé à : " + employe.getEmail());
-        System.out.println("Objet : Vos identifiants de connexion");
-        System.out.println("Mot de passe généré : " + generatedPassword);
-        System.out.println("Veuillez vous connecter et changer votre mot de passe.");
-        System.out.println("==========================================================");
+        // Envoyer le vrai email
+        emailService.sendTempPasswordEmail(employe.getEmail(), generatedPassword);
         
         EmployeResponseDto employeResponseDto=employesMapper.toDto(employe);
         employeResponseDto.setGeneratedPassword(generatedPassword);
