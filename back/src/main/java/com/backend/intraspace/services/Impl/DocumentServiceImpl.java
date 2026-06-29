@@ -1,11 +1,10 @@
 package com.backend.intraspace.services.Impl;
 
 import com.backend.intraspace.dtos.DocumentUploadResponseDto;
-import com.backend.intraspace.entities.DocumentRH;
-import com.backend.intraspace.repositories.DocumentChunkRepository;
-import com.backend.intraspace.repositories.DocumentRHRepository;
+import com.backend.intraspace.entities.Document;
+import com.backend.intraspace.repositories.DocumentRepository;
+import com.backend.intraspace.services.DocumentIndexingService;
 import com.backend.intraspace.services.DocumentService;
-import com.backend.intraspace.services.RagPipelineService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tika.Tika;
@@ -18,8 +17,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.Principal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 
@@ -35,9 +36,8 @@ public class DocumentServiceImpl implements DocumentService {
     );
     private static final long MAX_SIZE_BYTES = 10L * 1024 * 1024; // 10 MB
 
-    private final DocumentRHRepository documentRHRepository;
-    private final DocumentChunkRepository documentChunkRepository;
-    private final RagPipelineService ragPipelineService;
+    private final DocumentRepository documentRepository;
+    private final DocumentIndexingService documentIndexingService;
 
     @Value("${app.upload.dir:uploads/hr-documents}")
     private String uploadDir;
@@ -49,13 +49,11 @@ public class DocumentServiceImpl implements DocumentService {
         if (file == null || file.isEmpty()) {
             throw new RuntimeException("Fichier vide ou manquant.");
         }
-
-        // Size validation
         if (file.getSize() > MAX_SIZE_BYTES) {
             throw new RuntimeException("Fichier trop volumineux — maximum 10 MB.");
         }
 
-        // MIME type validation via Tika (content-based, not just extension)
+        // Content-based MIME detection via Tika
         String mimeType;
         try {
             mimeType = tika.detect(file.getInputStream(), file.getOriginalFilename());
@@ -66,12 +64,11 @@ public class DocumentServiceImpl implements DocumentService {
             throw new RuntimeException("Type de fichier non autorisé — PDF ou DOCX uniquement. Détecté : " + mimeType);
         }
 
-        // Build unique filename: timestamp_originalName
+        // Unique filename: timestamp_originalName
         String originalName = sanitize(file.getOriginalFilename());
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
         String storedName = timestamp + "_" + originalName;
 
-        // Ensure upload directory exists
         Path uploadPath = Paths.get(uploadDir).toAbsolutePath();
         try {
             Files.createDirectories(uploadPath);
@@ -79,7 +76,6 @@ public class DocumentServiceImpl implements DocumentService {
             throw new RuntimeException("Impossible de créer le répertoire d'upload.");
         }
 
-        // Save file to disk
         Path destination = uploadPath.resolve(storedName);
         try {
             file.transferTo(destination.toFile());
@@ -87,21 +83,20 @@ public class DocumentServiceImpl implements DocumentService {
             throw new RuntimeException("Erreur lors de la sauvegarde du fichier.");
         }
 
-        // Persist metadata
-        DocumentRH doc = new DocumentRH();
-        doc.setNom(originalName);
-        doc.setCheminFichier(destination.toString());
-        doc.setTypeMime(mimeType);
-        doc.setTaille(file.getSize());
-        doc.setDateUpload(LocalDateTime.now());
-        doc.setUploadePar(principal.getName());
-        doc.setStatut("UPLOADING");
-        doc = documentRHRepository.save(doc);
+        // Persist metadata using colleague's Document entity
+        Document doc = new Document();
+        doc.setFileName(originalName);
+        doc.setFileType(mimeType);
+        doc.setUploadDate(LocalDate.now());
+        doc.setFilePath(destination.toString());
+        doc.setStatus("PROCESSING");
+        doc.setAccessRole("ROLE_ADMIN");
+        doc.setUploadedBy(principal.getName());
+        doc = documentRepository.save(doc);
 
-        // Trigger async RAG pipeline
-        ragPipelineService.process(doc.getId(), destination.toString());
-
-        log.info("Document '{}' uploadé par {} — RAG pipeline déclenché.", originalName, principal.getName());
+        // Trigger async RAG indexing pipeline
+        documentIndexingService.index(doc.getId(), destination.toString(), doc.getAccessRole());
+        log.info("Document '{}' uploadé — pipeline RAG déclenché.", originalName);
 
         DocumentUploadResponseDto dto = toDto(doc);
         dto.setMessage("Document uploadé. Pipeline RAG en cours...");
@@ -110,15 +105,17 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     public List<DocumentUploadResponseDto> getAll() {
-        return documentRHRepository.findAllByOrderByDateUploadDesc()
-                .stream().map(this::toDto).toList();
+        return documentRepository.findAll().stream()
+                .sorted(Comparator.comparing(Document::getUploadDate, Comparator.reverseOrder()))
+                .map(this::toDto)
+                .toList();
     }
 
-    private DocumentUploadResponseDto toDto(DocumentRH doc) {
+    private DocumentUploadResponseDto toDto(Document doc) {
         return new DocumentUploadResponseDto(
-                doc.getId(), doc.getNom(), doc.getTypeMime(),
-                doc.getTaille(), doc.getDateUpload(),
-                doc.getUploadePar(), doc.getStatut(), null
+                doc.getId(), doc.getFileName(), doc.getFileType(),
+                doc.getUploadDate(), doc.getStatus(), doc.getAccessRole(),
+                doc.getUploadedBy(), null
         );
     }
 

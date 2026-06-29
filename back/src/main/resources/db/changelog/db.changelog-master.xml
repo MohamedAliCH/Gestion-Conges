@@ -173,4 +173,36 @@
         </addColumn>
     </changeSet>
 
+
+    <changeSet id="007-document-uploaded-by" author="ahmed">
+        <addColumn tableName="documents">
+            <column name="uploaded_by" type="VARCHAR(255)"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="008-chatbot-conversations" author="ahmed">
+        <createTable tableName="chatbot_conversations">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="user_email" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="question" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sql_generated" type="TEXT"/>
+            <column name="response" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex tableName="chatbot_conversations" indexName="idx_chatbot_user_email">
+            <column name="user_email"/>
+        </createIndex>
+    </changeSet>
+
 </databaseChangeLog>

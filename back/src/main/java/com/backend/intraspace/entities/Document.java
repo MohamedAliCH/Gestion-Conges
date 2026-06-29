@@ -38,4 +38,7 @@ public class Document {
     @Column(name = "access_role", nullable = false)
     private String accessRole; // ROLE_ADMIN ou ROLE_EMPLOYE
 
+    @Column(name = "uploaded_by")
+    private String uploadedBy;
+
 }

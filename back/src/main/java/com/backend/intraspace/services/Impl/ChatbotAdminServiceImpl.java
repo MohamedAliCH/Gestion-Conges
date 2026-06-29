@@ -4,9 +4,9 @@ import com.backend.intraspace.dtos.ChatbotResponse;
 import com.backend.intraspace.entities.ChatbotConversation;
 import com.backend.intraspace.repositories.ChatbotConversationRepository;
 import com.backend.intraspace.services.ChatbotAdminService;
-import com.backend.intraspace.services.LlmClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class ChatbotAdminServiceImpl implements ChatbotAdminService {
 
-    private final LlmClient llmClient;
+    private final ChatClient.Builder chatClientBuilder;
     private final JdbcTemplate jdbcTemplate;
     private final ChatbotConversationRepository conversationRepository;
 
@@ -36,7 +36,8 @@ public class ChatbotAdminServiceImpl implements ChatbotAdminService {
             TABLE employes
               id BIGINT (PK), prenom VARCHAR, nom VARCHAR, email VARCHAR (unique),
               cin VARCHAR (unique), role VARCHAR ('ROLE_ADMIN' ou 'ROLE_EMPLOYE'),
-              is_active BOOLEAN, created_at DATE, phone VARCHAR, address VARCHAR
+              is_active BOOLEAN, created_at DATE, phone VARCHAR, address VARCHAR,
+              date_embauche DATE, solde_annuel INTEGER, solde_maladie INTEGER
 
             TABLE conges
               id BIGINT (PK), employe_id BIGINT (FK → employes.id),
@@ -45,9 +46,10 @@ public class ChatbotAdminServiceImpl implements ChatbotAdminService {
               status VARCHAR ('En attente' | 'Approuvé' | 'Refusé'),
               reason VARCHAR, refus_motif VARCHAR
 
-            TABLE documents_rh
-              id BIGINT (PK), nom VARCHAR, type_mime VARCHAR, taille BIGINT,
-              date_upload TIMESTAMP, uploade_par VARCHAR, statut VARCHAR
+            TABLE documents
+              id BIGINT (PK), file_name VARCHAR, file_type VARCHAR,
+              upload_date DATE, status VARCHAR ('INDEXED' | 'ERROR' | 'PROCESSING'),
+              file_path VARCHAR, access_role VARCHAR ('ROLE_ADMIN' | 'ROLE_EMPLOYE')
 
             RÈGLES ABSOLUES :
             1. Génère UNIQUEMENT la requête SQL SELECT brute, sans markdown (pas de ```), sans commentaires
@@ -70,8 +72,9 @@ public class ChatbotAdminServiceImpl implements ChatbotAdminService {
     @Override
     public ChatbotResponse ask(String question, String adminEmail) {
         log.info("[Chatbot] Question de '{}' : {}", adminEmail, question);
+        ChatClient chatClient = chatClientBuilder.build();
 
-        String sql = generateSql(question);
+        String sql = generateSql(chatClient, question);
         if ("HORS_SCOPE".equalsIgnoreCase(sql)) {
             return ChatbotResponse.outOfScope();
         }
@@ -85,14 +88,13 @@ public class ChatbotAdminServiceImpl implements ChatbotAdminService {
 
         List<Map<String, Object>> results;
         try {
-            String safeSql = addLimitIfAbsent(sql);
-            results = jdbcTemplate.queryForList(safeSql);
+            results = jdbcTemplate.queryForList(addLimitIfAbsent(sql));
         } catch (Exception e) {
             log.error("[Chatbot] Erreur exécution SQL : {}", e.getMessage());
             return ChatbotResponse.sqlError(sql, e.getMessage());
         }
 
-        String nlResponse = generateNlResponse(question, sql, results);
+        String nlResponse = generateNlResponse(chatClient, question, sql, results);
         save(adminEmail, question, sql, nlResponse);
 
         log.info("[Chatbot] Réponse générée — {} ligne(s) SQL", results.size());
@@ -101,8 +103,9 @@ public class ChatbotAdminServiceImpl implements ChatbotAdminService {
 
     @Override
     public void streamAsk(String question, String adminEmail, SseEmitter emitter) {
-        String sql = generateSql(question);
+        ChatClient chatClient = chatClientBuilder.build();
 
+        String sql = generateSql(chatClient, question);
         if ("HORS_SCOPE".equalsIgnoreCase(sql)) {
             sendAndComplete(emitter, "Je ne peux répondre qu'aux questions sur les données RH.");
             return;
@@ -123,20 +126,29 @@ public class ChatbotAdminServiceImpl implements ChatbotAdminService {
             return;
         }
 
-        List<Map<String, String>> messages = buildNlMessages(question, sql, results);
+        String userContent = buildNlUserContent(question, sql, results);
         StringBuilder full = new StringBuilder();
 
         try {
-            llmClient.streamComplete(messages, token -> {
-                full.append(token);
-                try {
-                    emitter.send(SseEmitter.event().data(token));
-                } catch (IOException ex) {
-                    throw new RuntimeException(ex);
-                }
-            });
-            save(adminEmail, question, sql, full.toString());
-            emitter.complete();
+            chatClient.prompt()
+                    .system(NL_SYSTEM_PROMPT)
+                    .user(userContent)
+                    .stream()
+                    .content()
+                    .doOnNext(token -> {
+                        full.append(token);
+                        try {
+                            emitter.send(SseEmitter.event().data(token));
+                        } catch (IOException ex) {
+                            throw new RuntimeException(ex);
+                        }
+                    })
+                    .doOnComplete(() -> {
+                        save(adminEmail, question, sql, full.toString());
+                        emitter.complete();
+                    })
+                    .doOnError(emitter::completeWithError)
+                    .blockLast();
         } catch (Exception e) {
             emitter.completeWithError(e);
         }
@@ -144,21 +156,19 @@ public class ChatbotAdminServiceImpl implements ChatbotAdminService {
 
     // ── SQL Generation ────────────────────────────────────────────────────────
 
-    private String generateSql(String question) {
-        List<Map<String, String>> messages = List.of(
-                Map.of("role", "system", "content", SQL_SYSTEM_PROMPT),
-                Map.of("role", "user", "content", question)
-        );
-        String raw = llmClient.complete(messages);
+    private String generateSql(ChatClient chatClient, String question) {
+        String raw = chatClient.prompt()
+                .system(SQL_SYSTEM_PROMPT)
+                .user(question)
+                .call()
+                .content();
         return extractSql(raw);
     }
 
     private String extractSql(String raw) {
-        // Strip markdown code fences
         String sql = raw.replaceAll("(?i)```sql\\s*", "")
                         .replaceAll("```\\s*", "")
                         .trim();
-        // Take only the first statement
         int semi = sql.indexOf(';');
         if (semi > 0) sql = sql.substring(0, semi).trim();
         return sql.trim();
@@ -171,7 +181,6 @@ public class ChatbotAdminServiceImpl implements ChatbotAdminService {
         if (!up.startsWith("SELECT")) {
             throw new SecurityException("Seules les requêtes SELECT sont autorisées.");
         }
-        // Conservative whitelist — anything that modifies data is rejected
         List<String> forbidden = List.of(
                 "INSERT", "UPDATE", "DELETE", "DROP", "CREATE", "ALTER",
                 "TRUNCATE", "EXEC", "EXECUTE", "CALL", "GRANT", "REVOKE",
@@ -193,26 +202,25 @@ public class ChatbotAdminServiceImpl implements ChatbotAdminService {
 
     // ── NL Response ───────────────────────────────────────────────────────────
 
-    private String generateNlResponse(String question, String sql, List<Map<String, Object>> results) {
-        return llmClient.complete(buildNlMessages(question, sql, results));
+    private String generateNlResponse(ChatClient chatClient, String question, String sql,
+                                       List<Map<String, Object>> results) {
+        return chatClient.prompt()
+                .system(NL_SYSTEM_PROMPT)
+                .user(buildNlUserContent(question, sql, results))
+                .call()
+                .content();
     }
 
-    private List<Map<String, String>> buildNlMessages(String question, String sql,
-                                                       List<Map<String, Object>> results) {
-        String userContent = String.format(
+    private String buildNlUserContent(String question, String sql, List<Map<String, Object>> results) {
+        return String.format(
                 "Question : %s\n\nRésultats (%d ligne(s)) :\n%s",
                 question, results.size(), formatResults(results)
-        );
-        return List.of(
-                Map.of("role", "system", "content", NL_SYSTEM_PROMPT),
-                Map.of("role", "user", "content", userContent)
         );
     }
 
     private String formatResults(List<Map<String, Object>> results) {
         if (results.isEmpty()) return "Aucun résultat.";
-        List<Map<String, Object>> display = results.size() > 50
-                ? results.subList(0, 50) : results;
+        List<Map<String, Object>> display = results.size() > 50 ? results.subList(0, 50) : results;
         String rows = display.stream()
                 .map(row -> row.entrySet().stream()
                         .map(e -> e.getKey() + ": " + e.getValue())
