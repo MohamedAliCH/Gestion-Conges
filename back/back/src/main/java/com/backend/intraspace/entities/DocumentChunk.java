@@ -25,5 +25,13 @@ public class DocumentChunk {
     @Column(name = "chunk_index", nullable = false)
     private int chunkIndex;
 
+    /**
+     * Rôle minimum requis pour accéder à ce chunk via RAG.
+     * ROLE_ADMIN = visible par l'admin uniquement.
+     * ROLE_EMPLOYE = visible par tous les utilisateurs authentifiés.
+     */
+    @Column(name = "access_role")
+    private String accessRole;
+
     // embedding (vector column) is managed via JdbcTemplate — not mapped here
 }

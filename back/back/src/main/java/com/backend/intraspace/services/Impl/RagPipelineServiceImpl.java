@@ -4,6 +4,7 @@ import com.backend.intraspace.entities.DocumentChunk;
 import com.backend.intraspace.entities.DocumentRH;
 import com.backend.intraspace.repositories.DocumentChunkRepository;
 import com.backend.intraspace.repositories.DocumentRHRepository;
+import com.backend.intraspace.services.LlmClient;
 import com.backend.intraspace.services.RagPipelineService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +37,7 @@ public class RagPipelineServiceImpl implements RagPipelineService {
     private final DocumentRHRepository documentRHRepository;
     private final DocumentChunkRepository documentChunkRepository;
     private final JdbcTemplate jdbcTemplate;
+    private final LlmClient llmClient;
 
     @Value("${rag.embedding.url:http://localhost:11434/api/embeddings}")
     private String embeddingUrl;
@@ -82,6 +84,7 @@ public class RagPipelineServiceImpl implements RagPipelineService {
                 chunk.setDocument(doc);
                 chunk.setContenu(chunkText);
                 chunk.setChunkIndex(i);
+                chunk.setAccessRole("ROLE_ADMIN"); // uploadé par admin — visible admin uniquement par défaut
                 chunk = documentChunkRepository.save(chunk);
 
                 try {
@@ -153,12 +156,79 @@ public class RagPipelineServiceImpl implements RagPipelineService {
     // ── pgvector storage ──────────────────────────────────────────────────────
 
     private void storeEmbedding(Long chunkId, float[] embedding) {
-        String vectorStr = "[" + IntStream.range(0, embedding.length)
-                .mapToObj(i -> String.valueOf(embedding[i]))
-                .collect(Collectors.joining(",")) + "]";
+        String vectorStr = toVectorStr(embedding);
         jdbcTemplate.update(
                 "UPDATE document_chunks SET embedding = CAST(? AS vector) WHERE id = ?",
                 vectorStr, chunkId
         );
+    }
+
+    private String toVectorStr(float[] embedding) {
+        return "[" + IntStream.range(0, embedding.length)
+                .mapToObj(i -> String.valueOf(embedding[i]))
+                .collect(Collectors.joining(",")) + "]";
+    }
+
+    // ── RAG Query (appelé par le chatbot employé) ─────────────────────────────
+
+    @Override
+    public String getAnswerFromRAG(String question, String userRole) {
+        log.info("[RAG] Recherche sémantique pour rôle={} : {}", userRole, question);
+
+        float[] queryEmbedding;
+        try {
+            queryEmbedding = callEmbeddingApi(question);
+        } catch (Exception e) {
+            log.warn("[RAG] Embedding de la question échoué : {}", e.getMessage());
+            return "Le service de recherche est temporairement indisponible.";
+        }
+
+        String vectorStr = toVectorStr(queryEmbedding);
+
+        // ROLE_ADMIN voit tous les chunks ; ROLE_EMPLOYE uniquement les chunks marqués ROLE_EMPLOYE
+        String sql = "ROLE_ADMIN".equals(userRole)
+                ? """
+                  SELECT c.contenu, d.nom AS doc_nom
+                  FROM document_chunks c
+                  JOIN documents_rh d ON c.document_id = d.id
+                  WHERE d.statut = 'PRET' AND c.embedding IS NOT NULL
+                  ORDER BY c.embedding <=> CAST(? AS vector)
+                  LIMIT 5
+                  """
+                : """
+                  SELECT c.contenu, d.nom AS doc_nom
+                  FROM document_chunks c
+                  JOIN documents_rh d ON c.document_id = d.id
+                  WHERE d.statut = 'PRET' AND c.embedding IS NOT NULL
+                    AND (c.access_role = 'ROLE_EMPLOYE' OR c.access_role IS NULL)
+                  ORDER BY c.embedding <=> CAST(? AS vector)
+                  LIMIT 5
+                  """;
+
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, vectorStr);
+
+        if (rows.isEmpty()) {
+            return "Je n'ai pas trouvé d'information pertinente dans les documents RH disponibles.";
+        }
+
+        String context = rows.stream()
+                .map(r -> (String) r.get("contenu"))
+                .collect(Collectors.joining("\n---\n"));
+
+        List<Map<String, String>> messages = List.of(
+                Map.of("role", "system", "content",
+                        "Tu es un assistant RH expert. Réponds en français à la question en te basant "
+                        + "uniquement sur le contexte fourni. Si la réponse n'est pas dans le contexte, "
+                        + "dis-le clairement sans inventer."),
+                Map.of("role", "user", "content",
+                        "Contexte extrait des documents RH :\n" + context + "\n\nQuestion : " + question)
+        );
+
+        try {
+            return llmClient.complete(messages);
+        } catch (Exception e) {
+            log.error("[RAG] LLM échoué : {}", e.getMessage());
+            return "Le service de génération de réponse est temporairement indisponible.";
+        }
     }
 }

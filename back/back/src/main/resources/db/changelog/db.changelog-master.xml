@@ -193,4 +193,37 @@
         <sql>CREATE INDEX IF NOT EXISTS idx_chunks_embedding ON document_chunks USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);</sql>
     </changeSet>
 
+    <changeSet id="006-chatbot-access-role" author="ai">
+        <!-- Contrôle d'accès RAG : ROLE_ADMIN ou ROLE_EMPLOYE -->
+        <addColumn tableName="document_chunks">
+            <column name="access_role" type="VARCHAR(50)" defaultValue="ROLE_ADMIN">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <!-- Historique des conversations du chatbot admin (isolé par email) -->
+        <createTable tableName="chatbot_conversations">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="user_email" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="question" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sql_generated" type="TEXT"/>
+            <column name="response" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex tableName="chatbot_conversations" indexName="idx_chatbot_user_email">
+            <column name="user_email"/>
+        </createIndex>
+    </changeSet>
+
 </databaseChangeLog>

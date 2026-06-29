@@ -40,6 +40,7 @@ public class SecurityConfig {
 
                         .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers("/api/documents/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers("/api/chatbot/**").hasAuthority("ROLE_ADMIN")
                             .anyRequest().authenticated()
                 )
                 .exceptionHandling(ex -> ex
