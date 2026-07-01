@@ -222,4 +222,26 @@
         </createIndex>
     </changeSet>
 
+
+    <changeSet id="010-admin-ahmed-permanent" author="ahmed">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM employes WHERE email = 'admin@gmail.com'
+            </sqlCheck>
+        </preConditions>
+        <insert tableName="employes">
+            <column name="prenom" value="Ahmed"/>
+            <column name="nom" value="Admin"/>
+            <column name="email" value="admin@gmail.com"/>
+            <column name="cin" value="99999999"/>
+            <column name="password" value="$2b$10$hZYbbwVR6PhlgtkbdEb1V.0w3dER8.KBv/l3O105pCcsDfVr5sjre"/>
+            <column name="role" value="ROLE_ADMIN"/>
+            <column name="is_active" valueBoolean="true"/>
+            <column name="created_at" valueDate="2026-07-01"/>
+            <column name="first_login" valueBoolean="false"/>
+            <column name="departement" value="Direction"/>
+            <column name="salaire" valueNumeric="5000.00"/>
+        </insert>
+    </changeSet>
+
 </databaseChangeLog>
