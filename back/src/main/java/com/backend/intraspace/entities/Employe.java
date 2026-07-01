@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Entity
@@ -63,4 +64,9 @@ public class Employe {
 
     @Column(name = "solde_maladie")
     private int soldeMaladie = 8;
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal salaire;
+
+    private String departement;
 }

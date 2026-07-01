@@ -92,6 +92,12 @@ public class EmployesServiceImpl implements EmployesService {
             int usedDays = congeRepository.sumApprovedDaysByTypeAndEmploye(employeExistant.getId(), "Congé Annuel");
             employeExistant.setSoldeAnnuel(Math.max(0, totalAcquired - usedDays));
         }
+        if (employeRequestDto.getSalaire() != null) {
+            employeExistant.setSalaire(employeRequestDto.getSalaire());
+        }
+        if (employeRequestDto.getDepartement() != null) {
+            employeExistant.setDepartement(employeRequestDto.getDepartement());
+        }
         employeRepository.save(employeExistant);
         return employesMapper.toDto(employeExistant);
 

@@ -180,6 +180,23 @@
         </addColumn>
     </changeSet>
 
+    <changeSet id="009-add-salaire-departement" author="ahmed">
+        <addColumn tableName="employes">
+            <column name="salaire" type="NUMERIC(10,2)"/>
+            <column name="departement" type="VARCHAR(100)"/>
+        </addColumn>
+        <update tableName="employes">
+            <column name="salaire" valueNumeric="4000.00"/>
+            <column name="departement" value="Direction"/>
+            <where>email = 'admin@intraspace.com'</where>
+        </update>
+        <update tableName="employes">
+            <column name="salaire" valueNumeric="2500.00"/>
+            <column name="departement" value="Informatique"/>
+            <where>email = 'employe@intraspace.com'</where>
+        </update>
+    </changeSet>
+
     <changeSet id="008-chatbot-conversations" author="ahmed">
         <createTable tableName="chatbot_conversations">
             <column name="id" type="BIGINT" autoIncrement="true">

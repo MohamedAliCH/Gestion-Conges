@@ -37,7 +37,8 @@ public class ChatbotAdminServiceImpl implements ChatbotAdminService {
               id BIGINT (PK), prenom VARCHAR, nom VARCHAR, email VARCHAR (unique),
               cin VARCHAR (unique), role VARCHAR ('ROLE_ADMIN' ou 'ROLE_EMPLOYE'),
               is_active BOOLEAN, created_at DATE, phone VARCHAR, address VARCHAR,
-              date_embauche DATE, solde_annuel INTEGER, solde_maladie INTEGER
+              date_embauche DATE, solde_annuel INTEGER, solde_maladie INTEGER,
+              salaire NUMERIC(10,2), departement VARCHAR
 
             TABLE conges
               id BIGINT (PK), employe_id BIGINT (FK → employes.id),
