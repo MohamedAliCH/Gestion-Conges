@@ -4,7 +4,7 @@ import { useEmploye } from '@/context/EmployeContext'
 import Footer from '@/components/layout/Footer'
 
 export default function Employes() {
-  const { employes, desactiverEmploye } = useEmploye()
+  const { employes, desactiverEmploye, loading } = useEmploye()
   const [search, setSearch] = useState('')
   const [filtreStatut, setFiltreStatut] = useState('Tous')
   const [filtreDept, setFiltreDept] = useState('Tous')
@@ -62,7 +62,7 @@ export default function Employes() {
             <div className="d-flex align-items-center gap-2">
               <i className="ti ti-users fs-5 text-primary" />
               <div>
-                <div className="fw-bold">{employes.length}</div>
+                <div className="fw-bold">{loading ? '...' : employes.length}</div>
                 <small className="text-secondary">Total</small>
               </div>
             </div>
@@ -73,7 +73,7 @@ export default function Employes() {
             <div className="d-flex align-items-center gap-2">
               <i className="ti ti-user-check fs-5 text-success" />
               <div>
-                <div className="fw-bold">{actifs}</div>
+                <div className="fw-bold">{loading ? '...' : actifs}</div>
                 <small className="text-secondary">Actifs</small>
               </div>
             </div>
@@ -84,7 +84,7 @@ export default function Employes() {
             <div className="d-flex align-items-center gap-2">
               <i className="ti ti-user-off fs-5 text-secondary" />
               <div>
-                <div className="fw-bold">{inactifs}</div>
+                <div className="fw-bold">{loading ? '...' : inactifs}</div>
                 <small className="text-secondary">Inactifs</small>
               </div>
             </div>
@@ -134,8 +134,17 @@ export default function Employes() {
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 ? (
-              <tr><td colSpan="5" className="text-center py-4 text-muted">Aucun employé trouvé.</td></tr>
+            {loading ? (
+              <tr>
+                <td colSpan="6" className="text-center py-5">
+                  <div className="spinner-border text-primary" role="status">
+                    <span className="visually-hidden">Chargement...</span>
+                  </div>
+                  <div className="mt-2 text-secondary">Chargement des employés...</div>
+                </td>
+              </tr>
+            ) : filtered.length === 0 ? (
+              <tr><td colSpan="6" className="text-center py-4 text-muted">Aucun employé trouvé.</td></tr>
             ) : filtered.map(emp => (
               /* Employé inactif affiché en grisé */
               <tr key={emp.id} className={`align-middle ${emp.statut === 'Inactif' ? 'opacity-50' : ''}`}>

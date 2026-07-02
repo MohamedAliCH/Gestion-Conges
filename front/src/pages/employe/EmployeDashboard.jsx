@@ -104,7 +104,7 @@ export default function EmployeDashboard() {
                 />
                 <path
                   className="text-primary"
-                  strokeDasharray={`${progressPercentage}, 100`}
+                  strokeDasharray={`${loading ? 0 : progressPercentage}, 100`}
                   d="M18 2.0845
                     a 15.9155 15.9155 0 0 1 0 31.831
                     a 15.9155 15.9155 0 0 1 0 -31.831"
@@ -115,13 +115,21 @@ export default function EmployeDashboard() {
                 />
               </svg>
               <div className="position-absolute top-50 start-50 translate-middle text-center">
-                <h3 className="mb-0 fw-bold">{soldeGlobal}</h3>
-                <small className="text-secondary">Jours<br/>Restants</small>
+                {loading ? (
+                  <div className="spinner-border spinner-border-sm text-primary" role="status">
+                    <span className="visually-hidden">Chargement...</span>
+                  </div>
+                ) : (
+                  <>
+                    <h3 className="mb-0 fw-bold">{soldeGlobal}</h3>
+                    <small className="text-secondary">Jours<br/>Restants</small>
+                  </>
+                )}
               </div>
             </div>
             <div className="mt-4 d-flex justify-content-between w-100 px-3 text-start small">
-              <div><span className="text-muted">Acquis:</span> <strong>{totalGlobal}</strong></div>
-              <div><span className="text-muted">Utilisés:</span> <strong>{usedAnnuel + usedMaladie}</strong></div>
+              <div><span className="text-muted">Acquis:</span> <strong>{loading ? '...' : totalGlobal}</strong></div>
+              <div><span className="text-muted">Utilisés:</span> <strong>{loading ? '...' : (usedAnnuel + usedMaladie)}</strong></div>
             </div>
           </div>
         </div>
@@ -134,15 +142,18 @@ export default function EmployeDashboard() {
                 <div className={`card p-4 h-100 bg-${b.color} bg-opacity-10 border border-${b.color} border-opacity-25 shadow-sm`}>
                   <h6 className="mb-3">{b.label}</h6>
                   <div className="d-flex justify-content-between align-items-end mb-2">
-                    {b.remaining !== null
-                      ? <h3 className="fw-bold mb-0">{b.remaining} jours</h3>
-                      : <h3 className="fw-bold mb-0">{b.used} jours utilisés</h3>
-                    }
-                    {b.total !== null && (
+                    {loading ? (
+                      <h3 className="fw-bold mb-0 text-muted">...</h3>
+                    ) : b.remaining !== null ? (
+                      <h3 className="fw-bold mb-0">{b.remaining} jours</h3>
+                    ) : (
+                      <h3 className="fw-bold mb-0">{b.used} jours utilisés</h3>
+                    )}
+                    {!loading && b.total !== null && (
                       <small className={`text-${b.color}`}>{b.used}/{b.total} utilisés</small>
                     )}
                   </div>
-                  {b.total !== null && (
+                  {!loading && b.total !== null && (
                     <div className="progress" style={{ height: 6 }}>
                       <div
                         className={`progress-bar bg-${b.color}`}
@@ -157,7 +168,7 @@ export default function EmployeDashboard() {
               <div className="card p-4 h-100 bg-secondary bg-opacity-10 border border-secondary border-opacity-25 shadow-sm">
                 <h6 className="mb-3">En cours de validation</h6>
                 <div className="d-flex justify-content-between align-items-end mb-2">
-                  <h3 className="fw-bold mb-0 text-secondary">{enCoursValidation} jour(s)</h3>
+                  <h3 className="fw-bold mb-0 text-secondary">{loading ? '...' : `${enCoursValidation} jour(s)`}</h3>
                 </div>
               </div>
             </div>
@@ -188,8 +199,11 @@ export default function EmployeDashboard() {
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan="7" className="text-center py-4 text-secondary">
-                        Chargement des congés...
+                      <td colSpan="7" className="text-center py-5">
+                        <div className="spinner-border text-primary" role="status">
+                          <span className="visually-hidden">Chargement...</span>
+                        </div>
+                        <div className="mt-2 text-secondary">Chargement de l'historique des congés...</div>
                       </td>
                     </tr>
                   ) : history.length === 0 ? (

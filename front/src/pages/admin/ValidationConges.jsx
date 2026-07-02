@@ -17,7 +17,7 @@ const TYPE_COLOR = {
 }
 
 export default function ValidationConges() {
-  const { conges, approuverConge, refuserConge } = useEmploye()
+  const { conges, approuverConge, refuserConge, loading } = useEmploye()
   const [filtre, setFiltre] = useState('Tous')
   const [refusModal, setRefusModal] = useState(null)
   const [refusMotif, setRefusMotif] = useState('')
@@ -58,7 +58,7 @@ export default function ValidationConges() {
             <div className="d-flex align-items-center gap-2">
               <i className="ti ti-clock fs-5 text-warning" />
               <div>
-                <div className="fw-bold fs-5">{enAttente}</div>
+                <div className="fw-bold fs-5">{loading ? '...' : enAttente}</div>
                 <small className="text-secondary">En attente</small>
               </div>
             </div>
@@ -69,7 +69,7 @@ export default function ValidationConges() {
             <div className="d-flex align-items-center gap-2">
               <i className="ti ti-circle-check fs-5 text-success" />
               <div>
-                <div className="fw-bold fs-5">{approuves}</div>
+                <div className="fw-bold fs-5">{loading ? '...' : approuves}</div>
                 <small className="text-secondary">Approuvés</small>
               </div>
             </div>
@@ -80,7 +80,7 @@ export default function ValidationConges() {
             <div className="d-flex align-items-center gap-2">
               <i className="ti ti-circle-x fs-5 text-danger" />
               <div>
-                <div className="fw-bold fs-5">{refuses}</div>
+                <div className="fw-bold fs-5">{loading ? '...' : refuses}</div>
                 <small className="text-secondary">Refusés</small>
               </div>
             </div>
@@ -97,7 +97,7 @@ export default function ValidationConges() {
             {s}
             {s !== 'Tous' && (
               <span className="ms-1 badge bg-white text-dark">
-                {conges.filter(c => c.statut === s).length}
+                {loading ? '...' : conges.filter(c => c.statut === s).length}
               </span>
             )}
           </button>
@@ -121,7 +121,16 @@ export default function ValidationConges() {
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 ? (
+            {loading ? (
+              <tr>
+                <td colSpan="9" className="text-center py-5">
+                  <div className="spinner-border text-primary" role="status">
+                    <span className="visually-hidden">Chargement...</span>
+                  </div>
+                  <div className="mt-2 text-secondary">Chargement des demandes de congés...</div>
+                </td>
+              </tr>
+            ) : filtered.length === 0 ? (
               <tr><td colSpan="9" className="text-center py-4 text-muted">Aucune demande.</td></tr>
             ) : filtered.map(c => (
               <tr key={c.id} className="align-middle">
