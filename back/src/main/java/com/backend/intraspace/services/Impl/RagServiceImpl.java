@@ -1,17 +1,26 @@
 package com.backend.intraspace.services.Impl;
 
+import com.backend.intraspace.entities.ChatbotConversation;
+import com.backend.intraspace.repositories.ChatbotConversationRepository;
 import com.backend.intraspace.services.RagService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
-import org.springframework.ai.document.Document;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.io.IOException;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.LinkedHashSet;
@@ -22,8 +31,11 @@ import java.util.stream.Collectors;
 @Slf4j
 public class RagServiceImpl implements RagService {
 
+    private static final int HISTORY_TURNS = 4;
+
     private final VectorStore vectorStore;
     private final ChatClient.Builder chatClientBuilder;
+    private final ChatbotConversationRepository conversationRepository;
 
     private static final String SYSTEM_PROMPT =
             "Tu es un assistant RH virtuel de l'entreprise IntraSpace. " +
@@ -34,21 +46,71 @@ public class RagServiceImpl implements RagService {
             "CONTEXTE :\n{context}";
 
     @Override
-    public String getAnswerFromRAG(String question, String userRole) {
-        List<Document> documents = searchDocuments(question, userRole);
+    public String getAnswerFromRAG(String question, String userRole, String userEmail) {
+        SearchRequest.Builder searchRequestBuilder = SearchRequest.builder()
+                .query(question)
+                .topK(3)
+                .similarityThreshold(0.75);
 
-        if (documents.isEmpty()) {
-            return "Désolé, je ne trouve pas d'informations RH pertinentes pour répondre à votre question.";
+        if (!"ROLE_ADMIN".equals(userRole)) {
+            FilterExpressionBuilder fb = new FilterExpressionBuilder();
+            searchRequestBuilder = searchRequestBuilder
+                    .filterExpression(fb.eq("access_role", "ROLE_EMPLOYE").build());
         }
 
-        String context = buildContextWithSources(documents);
+        List<Document> documents = vectorStore.similaritySearch(searchRequestBuilder.build());
 
-        ChatClient chatClient = chatClientBuilder.build();
-        return chatClient.prompt()
-                .system(sp -> sp.text(SYSTEM_PROMPT).param("context", context))
-                .user(question)
-                .call()
-                .content();
+        String answer;
+        if (documents.isEmpty()) {
+            answer = "Désolé, je ne trouve pas d'informations RH pertinentes pour répondre à votre question.";
+        } else {
+            String context = documents.stream()
+                    .map(Document::getFormattedContent)
+                    .collect(Collectors.joining("\n\n"));
+
+            List<Message> history = buildHistoryMessages(userEmail);
+
+            ChatClient chatClient = chatClientBuilder.build();
+            answer = chatClient.prompt()
+                    .system(sp -> sp.text(
+                            "Tu es un assistant RH virtuel de l'entreprise IntraSpace. " +
+                            "Réponds à la question de l'employé en te basant uniquement sur le contexte ci-dessous. " +
+                            "Si la réponse n'est pas dans le contexte, dis poliment que tu ne sais pas.\n\n" +
+                            "CONTEXTE :\n{context}")
+                            .param("context", context))
+                    .messages(history)
+                    .user(question)
+                    .call()
+                    .content();
+        }
+
+        save(userEmail, question, answer);
+        return answer;
+    }
+
+    private List<Message> buildHistoryMessages(String userEmail) {
+        List<ChatbotConversation> recent = conversationRepository.findByUserEmailOrderByCreatedAtDesc(
+                userEmail,
+                PageRequest.of(0, HISTORY_TURNS, Sort.by("createdAt").descending()));
+
+        // oldest first so the LLM sees the conversation in chronological order
+        Collections.reverse(recent);
+
+        List<Message> messages = new ArrayList<>();
+        for (ChatbotConversation conv : recent) {
+            messages.add(new UserMessage(conv.getQuestion()));
+            messages.add(new AssistantMessage(conv.getResponse()));
+        }
+        return messages;
+    }
+
+    private void save(String email, String question, String response) {
+        ChatbotConversation conv = new ChatbotConversation();
+        conv.setUserEmail(email);
+        conv.setQuestion(question);
+        conv.setResponse(response);
+        conv.setCreatedAt(LocalDateTime.now());
+        conversationRepository.save(conv);
     }
 
     @Override
