@@ -6,6 +6,8 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 import lombok.extern.slf4j.Slf4j;
 
+import org.springframework.scheduling.annotation.Async;
+
 @Service
 @Slf4j
 public class EmailService {
@@ -13,6 +15,7 @@ public class EmailService {
     @Autowired
     private JavaMailSender mailSender;
 
+    @Async
     public void sendTempPasswordEmail(String toEmail, String tempPassword) {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
