@@ -48,7 +48,7 @@ public class ChatbotEmployeController {
                     .body(Map.of("error", "Trop de requêtes. Veuillez attendre une minute avant de réessayer."));
         }
 
-        String response = ragService.getAnswerFromRAG(request.getQuestion(), role);
+        String response = ragService.getAnswerFromRAG(request.getQuestion(), role, userEmail);
         return ResponseEntity.ok(response);
     }
 
