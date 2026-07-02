@@ -64,7 +64,7 @@ Ces questions sont destinées à tester le chatbot employé (`POST /api/chatbot/
 2. Quand est-ce que mon solde de congés est mis à jour ?
 3. Puis-je prendre des congés que je n'ai pas encore acquis ?
 4. Que se passe-t-il si j'ai un solde négatif à la fin du contrat ?
-5. Où puis-je consulter mon solde de congés ?
+
 6. Mon responsable peut-il voir mes soldes de congés ?
 7. Les congés exceptionnels impactent-ils mon solde annuel ?
 
@@ -87,7 +87,7 @@ Ces questions sont destinées à tester le chatbot employé (`POST /api/chatbot/
 
 1. Quelle est la différence entre un congé annuel, un congé maladie et un congé exceptionnel ?
 2. Quels sont les différents types de congés disponibles dans l'entreprise ?
-3. Combien de temps à l'avance dois-je prévenir en cas d'absence ?
+3. Combien de temps à l'avance dois-je prév5. Où puis-je consulter mon solde de congés ?enir en cas d'absence ?
 4. Quels sont mes droits si ma demande de congé est refusée ?
 5. Quelles sont les règles générales sur les congés dans l'entreprise ?
 
