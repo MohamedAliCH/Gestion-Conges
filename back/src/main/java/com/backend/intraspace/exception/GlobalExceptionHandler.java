@@ -12,11 +12,25 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<Map<String, String>> handleRuntime(RuntimeException ex) {
+    @ExceptionHandler(org.springframework.security.core.AuthenticationException.class)
+    public ResponseEntity<Map<String, String>> handleAuthenticationException(org.springframework.security.core.AuthenticationException ex) {
         return ResponseEntity
-                .status(HttpStatus.CONFLICT)
-                .body(Map.of("erreur", ex.getMessage()));
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of(
+                        "erreur", "Identifiants incorrects",
+                        "message", "Identifiants incorrects"
+                ));
+    }
+
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<Map<String, String>> handleRuntimeException(RuntimeException ex) {
+        ex.printStackTrace();
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(Map.of(
+                        "erreur", ex.getMessage(),
+                        "message", ex.getMessage()
+                ));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
