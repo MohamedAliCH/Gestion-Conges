@@ -14,7 +14,9 @@ public class ChatbotResponse {
 
     public static ChatbotResponse outOfScope() {
         return new ChatbotResponse(
-                "Je ne peux répondre qu'aux questions sur les données RH.",
+                "Cette question porte sur les politiques ou règlements RH. " +
+                "Pour y répondre, utilisez le Chatbot Employé (menu Chatbot) qui a accès aux documents RH indexés. " +
+                "Ce chatbot admin répond uniquement aux questions sur les données : soldes, absences, congés, salaires, employés.",
                 null, null
         );
     }

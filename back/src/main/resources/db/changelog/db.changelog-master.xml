@@ -244,4 +244,23 @@
         </insert>
     </changeSet>
 
+
+    <changeSet id="012-fix-document-access-role" author="ahmed">
+        <!-- Documents uploadés par l'admin sont destinés aux employés -->
+        <sql>UPDATE documents SET access_role = 'ROLE_EMPLOYE' WHERE access_role = 'ROLE_ADMIN';</sql>
+        <!-- Supprimer les chunks mal indexés (ROLE_ADMIN) et remettre le statut à PROCESSING -->
+        <sql>
+            DO $$ BEGIN
+                DELETE FROM vector_store WHERE metadata::text LIKE '%ROLE_ADMIN%';
+                UPDATE documents SET status = 'PROCESSING' WHERE access_role = 'ROLE_EMPLOYE';
+            EXCEPTION WHEN OTHERS THEN NULL;
+            END $$;
+        </sql>
+    </changeSet>
+
+    <changeSet id="011-fix-vector-dimension-1024" author="ahmed">
+        <!-- Drop vector_store so Spring AI recreates it with correct 1024 dims (Mistral embed) -->
+        <sql>DROP TABLE IF EXISTS vector_store CASCADE;</sql>
+    </changeSet>
+
 </databaseChangeLog>

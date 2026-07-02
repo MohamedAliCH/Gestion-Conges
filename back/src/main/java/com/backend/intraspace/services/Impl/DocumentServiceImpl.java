@@ -90,7 +90,7 @@ public class DocumentServiceImpl implements DocumentService {
         doc.setUploadDate(LocalDate.now());
         doc.setFilePath(destination.toString());
         doc.setStatus("PROCESSING");
-        doc.setAccessRole("ROLE_ADMIN");
+        doc.setAccessRole("ROLE_EMPLOYE");
         doc.setUploadedBy(principal.getName());
         doc = documentRepository.save(doc);
 

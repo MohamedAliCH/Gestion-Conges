@@ -29,11 +29,13 @@ public class ChatbotAdminServiceImpl implements ChatbotAdminService {
 
     // ── System prompts ────────────────────────────────────────────────────────
 
-    private String buildSqlPrompt() {
+    private String buildSqlPrompt(String userEmail) {
         String today = LocalDate.now().toString();
         return """
             Tu es un assistant Text-to-SQL expert pour une base de données RH PostgreSQL.
             Aujourd'hui nous sommes le : %s
+            L'utilisateur connecté a pour email : %s
+            Quand la question contient "je", "mon", "mes", "ma", "moi" → filtre avec WHERE e.email = '%s'
 
             ══ SCHÉMA COMPLET ══════════════════════════════════════════════
 
@@ -59,7 +61,9 @@ public class ChatbotAdminServiceImpl implements ChatbotAdminService {
             ══ RÈGLES ABSOLUES ══════════════════════════════════════════════
             1. Génère UNIQUEMENT la requête SQL SELECT brute, sans markdown (pas de ```), sans commentaires
             2. N'utilise JAMAIS INSERT, UPDATE, DELETE, DROP, CREATE, ALTER, TRUNCATE
-            3. Si la question n'est pas liée aux données RH, réponds exactement : HORS_SCOPE
+            3. Si la question porte sur des règlements, droits légaux, procédures internes, ou toute information qui n'est PAS dans la base de données → réponds exactement : HORS_SCOPE
+               Exemples HORS_SCOPE : "peut-on reporter des congés à l'année suivante", "quel est le délai de préavis légal", "comment fonctionne la mutuelle", "quels sont mes droits légaux"
+               NE PAS mettre HORS_SCOPE si la réponse peut venir de la base (soldes, salaires, absences, congés pris, etc.)
             4. Pour chercher un nom ou prénom → utilise ILIKE '%%mot%%' (insensible à la casse)
             5. Pour chercher si quelqu'un est en congé à une date X → date_debut <= 'X' AND date_fin >= 'X'
             6. Pour les JOINs → JOIN conges c ON c.employe_id = e.id
@@ -71,6 +75,21 @@ public class ChatbotAdminServiceImpl implements ChatbotAdminService {
             12. Pour filtrer par année courante → EXTRACT(YEAR FROM c.date_debut) = EXTRACT(YEAR FROM CURRENT_DATE). JAMAIS EXTRACT(YEAR FROM 'une-date-string')
 
             ══ EXEMPLES (FEW-SHOT) ══════════════════════════════════════════
+
+            Q: Combien de jours de congé j'acquiers par mois ?
+            SQL: SELECT e.prenom, e.nom, e.solde_annuel, ROUND(e.solde_annuel / 12.0, 1) AS jours_par_mois FROM employes e WHERE e.email = '%s'
+
+            Q: Quel est mon solde de congés ?
+            SQL: SELECT e.prenom, e.nom, e.solde_annuel, e.solde_maladie FROM employes e WHERE e.email = '%s'
+
+            Q: Combien de jours de congé me reste-t-il ?
+            SQL: SELECT e.prenom, e.nom, e.solde_annuel, e.solde_maladie FROM employes e WHERE e.email = '%s'
+
+            Q: Est-ce que les congés non pris peuvent être reportés à l'année suivante ?
+            SQL: HORS_SCOPE
+
+            Q: Comment fonctionne la mutuelle de l'entreprise ?
+            SQL: HORS_SCOPE
 
             Q: Quel est le statut de l'employé Doe ?
             SQL: SELECT e.prenom, e.nom, e.email, e.departement, e.is_active, e.date_embauche, e.salaire FROM employes e WHERE e.nom ILIKE '%%Doe%%' OR e.prenom ILIKE '%%Doe%%'
@@ -125,7 +144,7 @@ public class ChatbotAdminServiceImpl implements ChatbotAdminService {
 
             Q: Quel est le salaire moyen dans l'entreprise ?
             SQL: SELECT ROUND(AVG(e.salaire), 2) AS salaire_moyen FROM employes e WHERE e.salaire IS NOT NULL
-            """.formatted(today, today, today, today, today, today);
+            """.formatted(today, userEmail, userEmail, today, userEmail, userEmail, userEmail, today, today, today, today);
     }
 
     private static final String NL_SYSTEM_PROMPT = """
@@ -143,7 +162,7 @@ public class ChatbotAdminServiceImpl implements ChatbotAdminService {
         log.info("[Chatbot] Question de '{}' : {}", adminEmail, question);
         ChatClient chatClient = chatClientBuilder.build();
 
-        String sql = generateSql(chatClient, question, buildSqlPrompt());
+        String sql = generateSql(chatClient, question, buildSqlPrompt(adminEmail));
         if ("HORS_SCOPE".equalsIgnoreCase(sql)) {
             return ChatbotResponse.outOfScope();
         }
@@ -174,9 +193,12 @@ public class ChatbotAdminServiceImpl implements ChatbotAdminService {
     public void streamAsk(String question, String adminEmail, SseEmitter emitter) {
         ChatClient chatClient = chatClientBuilder.build();
 
-        String sql = generateSql(chatClient, question, buildSqlPrompt());
+        String sql = generateSql(chatClient, question, buildSqlPrompt(adminEmail));
         if ("HORS_SCOPE".equalsIgnoreCase(sql)) {
-            sendAndComplete(emitter, "Je ne peux répondre qu'aux questions sur les données RH.");
+            sendAndComplete(emitter,
+                "Cette question porte sur les politiques ou règlements RH. " +
+                "Pour y répondre, utilisez le Chatbot Employé (menu Chatbot) qui a accès aux documents RH indexés. " +
+                "Ce chatbot admin répond uniquement aux questions sur les données : soldes, absences, congés, salaires, employés.");
             return;
         }
 
@@ -237,6 +259,7 @@ public class ChatbotAdminServiceImpl implements ChatbotAdminService {
     private String extractSql(String raw) {
         String sql = raw.replaceAll("(?i)```sql\\s*", "")
                         .replaceAll("```\\s*", "")
+                        .replaceAll("(?i)^sql:\\s*", "")
                         .trim();
         int semi = sql.indexOf(';');
         if (semi > 0) sql = sql.substring(0, semi).trim();
