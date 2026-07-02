@@ -32,8 +32,4 @@ build/
 ### VS Code ###
 .vscode/
 .env
-front/node_modules/
-front/dist/
-front/.env
-*.html
-!front/index.html
+front/

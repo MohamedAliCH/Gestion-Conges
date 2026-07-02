@@ -98,17 +98,56 @@ public class DocumentIndexingServiceImpl implements DocumentIndexingService {
         return handler.toString().trim();
     }
 
+    /**
+     * Découpe intelligente du texte en respectant les limites de paragraphes et de phrases.
+     * Évite de couper au milieu d'une phrase pour améliorer la qualité des réponses RAG.
+     */
     private List<String> chunkText(String text) {
         List<String> chunks = new ArrayList<>();
-        int start = 0;
-        while (start < text.length()) {
-            int end = Math.min(start + chunkSize, text.length());
-            String chunk = text.substring(start, end).trim();
-            if (!chunk.isBlank()) {
-                chunks.add(chunk);
+
+        // 1. Split by paragraphs first (double newline or more)
+        String[] paragraphs = text.split("\\n\\s*\\n");
+        StringBuilder currentChunk = new StringBuilder();
+
+        for (String paragraph : paragraphs) {
+            String trimmed = paragraph.trim();
+            if (trimmed.isBlank()) continue;
+
+            // If adding this paragraph exceeds chunk size, finalize current chunk
+            if (currentChunk.length() + trimmed.length() > chunkSize && currentChunk.length() > 0) {
+                chunks.add(currentChunk.toString().trim());
+                // Keep overlap: take the last `chunkOverlap` characters from the end
+                String overlap = currentChunk.length() > chunkOverlap
+                        ? currentChunk.substring(currentChunk.length() - chunkOverlap)
+                        : currentChunk.toString();
+                currentChunk = new StringBuilder(overlap);
             }
-            start += chunkSize - chunkOverlap;
+
+            // If a single paragraph is larger than chunkSize, split it by sentences
+            if (trimmed.length() > chunkSize) {
+                String[] sentences = trimmed.split("(?<=[.!?])\\s+");
+                for (String sentence : sentences) {
+                    if (currentChunk.length() + sentence.length() > chunkSize && currentChunk.length() > 0) {
+                        chunks.add(currentChunk.toString().trim());
+                        String overlap = currentChunk.length() > chunkOverlap
+                                ? currentChunk.substring(currentChunk.length() - chunkOverlap)
+                                : currentChunk.toString();
+                        currentChunk = new StringBuilder(overlap);
+                    }
+                    if (currentChunk.length() > 0) currentChunk.append(" ");
+                    currentChunk.append(sentence);
+                }
+            } else {
+                if (currentChunk.length() > 0) currentChunk.append("\n\n");
+                currentChunk.append(trimmed);
+            }
         }
+
+        // Don't forget the last chunk
+        if (currentChunk.length() > 0 && !currentChunk.toString().isBlank()) {
+            chunks.add(currentChunk.toString().trim());
+        }
+
         return chunks;
     }
 }
