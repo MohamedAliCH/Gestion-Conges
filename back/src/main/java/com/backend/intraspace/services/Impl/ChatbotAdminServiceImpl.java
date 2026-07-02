@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -28,14 +29,17 @@ public class ChatbotAdminServiceImpl implements ChatbotAdminService {
 
     // ── System prompts ────────────────────────────────────────────────────────
 
-    private static final String SQL_SYSTEM_PROMPT = """
+    private String buildSqlPrompt() {
+        String today = LocalDate.now().toString();
+        return """
             Tu es un assistant Text-to-SQL expert pour une base de données RH PostgreSQL.
+            Aujourd'hui nous sommes le : %s
 
-            SCHÉMA COMPLET DE LA BASE :
+            ══ SCHÉMA COMPLET ══════════════════════════════════════════════
 
             TABLE employes
               id BIGINT (PK), prenom VARCHAR, nom VARCHAR, email VARCHAR (unique),
-              cin VARCHAR (unique), role VARCHAR ('ROLE_ADMIN' ou 'ROLE_EMPLOYE'),
+              cin VARCHAR (unique), role VARCHAR ('ROLE_ADMIN' | 'ROLE_EMPLOYE'),
               is_active BOOLEAN, created_at DATE, phone VARCHAR, address VARCHAR,
               date_embauche DATE, solde_annuel INTEGER, solde_maladie INTEGER,
               salaire NUMERIC(10,2), departement VARCHAR
@@ -52,13 +56,77 @@ public class ChatbotAdminServiceImpl implements ChatbotAdminService {
               upload_date DATE, status VARCHAR ('INDEXED' | 'ERROR' | 'PROCESSING'),
               file_path VARCHAR, access_role VARCHAR ('ROLE_ADMIN' | 'ROLE_EMPLOYE')
 
-            RÈGLES ABSOLUES :
+            ══ RÈGLES ABSOLUES ══════════════════════════════════════════════
             1. Génère UNIQUEMENT la requête SQL SELECT brute, sans markdown (pas de ```), sans commentaires
             2. N'utilise JAMAIS INSERT, UPDATE, DELETE, DROP, CREATE, ALTER, TRUNCATE
-            3. Si la question n'est pas liée aux données RH, réponds exactement le mot : HORS_SCOPE
-            4. Utilise des alias lisibles (ex: e.nom AS nom_employe)
-            5. Ajoute toujours LIMIT 100 si la requête peut retourner beaucoup de lignes
-            """;
+            3. Si la question n'est pas liée aux données RH, réponds exactement : HORS_SCOPE
+            4. Pour chercher un nom ou prénom → utilise ILIKE '%%mot%%' (insensible à la casse)
+            5. Pour chercher si quelqu'un est en congé à une date X → date_debut <= 'X' AND date_fin >= 'X'
+            6. Pour les JOINs → JOIN conges c ON c.employe_id = e.id
+            7. Utilise des alias lisibles : e.nom AS nom, e.prenom AS prenom, c.status AS statut_conge
+            8. Ajoute LIMIT 100 si la requête peut retourner beaucoup de lignes
+            9. Pour "aujourd'hui" ou "maintenant" → utilise la date du jour : %s
+            10. Pour ORDER BY sur une colonne nullable → toujours ajouter NULLS LAST (ex: ORDER BY salaire DESC NULLS LAST)
+            11. Pour les colonnes nullable → filtre avec WHERE colonne IS NOT NULL si la question porte sur cette colonne
+            12. Pour filtrer par année courante → EXTRACT(YEAR FROM c.date_debut) = EXTRACT(YEAR FROM CURRENT_DATE). JAMAIS EXTRACT(YEAR FROM 'une-date-string')
+
+            ══ EXEMPLES (FEW-SHOT) ══════════════════════════════════════════
+
+            Q: Quel est le statut de l'employé Doe ?
+            SQL: SELECT e.prenom, e.nom, e.email, e.departement, e.is_active, e.date_embauche, e.salaire FROM employes e WHERE e.nom ILIKE '%%Doe%%' OR e.prenom ILIKE '%%Doe%%'
+
+            Q: Est-ce que quelqu'un a posé un congé le 2026-07-15 ?
+            SQL: SELECT e.prenom, e.nom, c.type, c.date_debut, c.date_fin, c.status FROM employes e JOIN conges c ON c.employe_id = e.id WHERE c.date_debut <= '2026-07-15' AND c.date_fin >= '2026-07-15'
+
+            Q: Est-ce que John a un congé en cours aujourd'hui ?
+            SQL: SELECT e.prenom, e.nom, c.type, c.date_debut, c.date_fin, c.status FROM employes e JOIN conges c ON c.employe_id = e.id WHERE (e.nom ILIKE '%%John%%' OR e.prenom ILIKE '%%John%%') AND c.date_debut <= '%s' AND c.date_fin >= '%s' AND c.status = 'Approuvé'
+
+            Q: Quels sont tous les congés de l'employé Ahmed ?
+            SQL: SELECT c.type, c.date_debut, c.date_fin, c.days, c.status, c.reason FROM employes e JOIN conges c ON c.employe_id = e.id WHERE e.nom ILIKE '%%Ahmed%%' OR e.prenom ILIKE '%%Ahmed%%' ORDER BY c.date_debut DESC LIMIT 100
+
+            Q: Qui est absent (en congé approuvé) aujourd'hui ?
+            SQL: SELECT e.prenom, e.nom, e.departement, c.type, c.date_debut, c.date_fin FROM employes e JOIN conges c ON c.employe_id = e.id WHERE c.date_debut <= '%s' AND c.date_fin >= '%s' AND c.status = 'Approuvé'
+
+            Q: Combien de congés en attente y a-t-il en ce moment ?
+            SQL: SELECT COUNT(*) AS total_en_attente FROM conges WHERE status = 'En attente'
+
+            Q: Liste des congés en attente avec le nom de l'employé ?
+            SQL: SELECT e.prenom, e.nom, e.email, c.type, c.date_debut, c.date_fin, c.days, c.reason FROM employes e JOIN conges c ON c.employe_id = e.id WHERE c.status = 'En attente' ORDER BY c.date_debut LIMIT 100
+
+            Q: Quel est le solde de congés de Marie ?
+            SQL: SELECT e.prenom, e.nom, e.solde_annuel, e.solde_maladie FROM employes e WHERE e.nom ILIKE '%%Marie%%' OR e.prenom ILIKE '%%Marie%%'
+
+            Q: Quels employés du département Informatique sont actifs ?
+            SQL: SELECT e.prenom, e.nom, e.email, e.date_embauche, e.salaire FROM employes e WHERE e.departement ILIKE '%%Informatique%%' AND e.is_active = true ORDER BY e.nom LIMIT 100
+
+            Q: Combien de jours de congé a pris l'employé Dupont cette année ?
+            SQL: SELECT e.prenom, e.nom, COALESCE(SUM(c.days), 0) AS total_jours_pris FROM employes e LEFT JOIN conges c ON c.employe_id = e.id AND EXTRACT(YEAR FROM c.date_debut) = EXTRACT(YEAR FROM CURRENT_DATE) AND c.status = 'Approuvé' WHERE e.nom ILIKE '%%Dupont%%' OR e.prenom ILIKE '%%Dupont%%' GROUP BY e.id, e.prenom, e.nom
+
+            Q: Combien de jours de congé a pris John cette année ?
+            SQL: SELECT e.prenom, e.nom, COALESCE(SUM(c.days), 0) AS total_jours_pris FROM employes e LEFT JOIN conges c ON c.employe_id = e.id AND EXTRACT(YEAR FROM c.date_debut) = EXTRACT(YEAR FROM CURRENT_DATE) AND c.status = 'Approuvé' WHERE e.nom ILIKE '%%John%%' OR e.prenom ILIKE '%%John%%' GROUP BY e.id, e.prenom, e.nom
+
+            Q: Quel département a le plus d'absences (tous congés confondus) ?
+            SQL: SELECT e.departement, COUNT(*) AS total_conges, SUM(c.days) AS total_jours FROM employes e JOIN conges c ON c.employe_id = e.id WHERE c.status = 'Approuvé' AND e.departement IS NOT NULL GROUP BY e.departement ORDER BY total_jours DESC NULLS LAST LIMIT 5
+
+            Q: Y a-t-il des conflits de congés entre deux employés sur la semaine du 2026-07-14 ?
+            SQL: SELECT e.prenom, e.nom, c.date_debut, c.date_fin, c.type FROM employes e JOIN conges c ON c.employe_id = e.id WHERE c.date_debut <= '2026-07-20' AND c.date_fin >= '2026-07-14' AND c.status = 'Approuvé' ORDER BY c.date_debut LIMIT 100
+
+            Q: Quel employé a le plus de congés refusés ?
+            SQL: SELECT e.prenom, e.nom, COUNT(*) AS nb_refus FROM employes e JOIN conges c ON c.employe_id = e.id WHERE c.status = 'Refusé' GROUP BY e.id, e.prenom, e.nom ORDER BY nb_refus DESC LIMIT 10
+
+            Q: Liste des employés embauchés après le 2026-01-01 ?
+            SQL: SELECT e.prenom, e.nom, e.email, e.departement, e.date_embauche FROM employes e WHERE e.date_embauche > '2026-01-01' ORDER BY e.date_embauche DESC LIMIT 100
+
+            Q: Quel est le salaire de Ahmed ?
+            SQL: SELECT e.prenom, e.nom, e.salaire, e.departement FROM employes e WHERE (e.nom ILIKE '%%Ahmed%%' OR e.prenom ILIKE '%%Ahmed%%') AND e.salaire IS NOT NULL
+
+            Q: Quel est le salaire le plus élevé et de qui ?
+            SQL: SELECT e.prenom, e.nom, e.salaire FROM employes e WHERE e.salaire IS NOT NULL ORDER BY e.salaire DESC NULLS LAST LIMIT 1
+
+            Q: Quel est le salaire moyen dans l'entreprise ?
+            SQL: SELECT ROUND(AVG(e.salaire), 2) AS salaire_moyen FROM employes e WHERE e.salaire IS NOT NULL
+            """.formatted(today, today, today, today, today, today);
+    }
 
     private static final String NL_SYSTEM_PROMPT = """
             Tu es un assistant RH professionnel et concis.
@@ -75,7 +143,7 @@ public class ChatbotAdminServiceImpl implements ChatbotAdminService {
         log.info("[Chatbot] Question de '{}' : {}", adminEmail, question);
         ChatClient chatClient = chatClientBuilder.build();
 
-        String sql = generateSql(chatClient, question);
+        String sql = generateSql(chatClient, question, buildSqlPrompt());
         if ("HORS_SCOPE".equalsIgnoreCase(sql)) {
             return ChatbotResponse.outOfScope();
         }
@@ -106,7 +174,7 @@ public class ChatbotAdminServiceImpl implements ChatbotAdminService {
     public void streamAsk(String question, String adminEmail, SseEmitter emitter) {
         ChatClient chatClient = chatClientBuilder.build();
 
-        String sql = generateSql(chatClient, question);
+        String sql = generateSql(chatClient, question, buildSqlPrompt());
         if ("HORS_SCOPE".equalsIgnoreCase(sql)) {
             sendAndComplete(emitter, "Je ne peux répondre qu'aux questions sur les données RH.");
             return;
@@ -157,9 +225,9 @@ public class ChatbotAdminServiceImpl implements ChatbotAdminService {
 
     // ── SQL Generation ────────────────────────────────────────────────────────
 
-    private String generateSql(ChatClient chatClient, String question) {
+    private String generateSql(ChatClient chatClient, String question, String sqlPrompt) {
         String raw = chatClient.prompt()
-                .system(SQL_SYSTEM_PROMPT)
+                .system(sqlPrompt)
                 .user(question)
                 .call()
                 .content();
