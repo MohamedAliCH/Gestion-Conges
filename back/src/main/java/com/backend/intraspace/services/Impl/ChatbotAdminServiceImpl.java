@@ -11,6 +11,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -22,6 +25,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 public class ChatbotAdminServiceImpl implements ChatbotAdminService {
+
+    private static final int HISTORY_TURNS = 3;
 
     private final ChatClient.Builder chatClientBuilder;
     private final JdbcTemplate jdbcTemplate;
@@ -162,7 +167,7 @@ public class ChatbotAdminServiceImpl implements ChatbotAdminService {
         log.info("[Chatbot] Question de '{}' : {}", adminEmail, question);
         ChatClient chatClient = chatClientBuilder.build();
 
-        String sql = generateSql(chatClient, question, buildSqlPrompt(adminEmail));
+        String sql = generateSql(chatClient, question, buildSqlPrompt(adminEmail) + buildHistoryContext(adminEmail));
         if ("HORS_SCOPE".equalsIgnoreCase(sql)) {
             return ChatbotResponse.outOfScope();
         }
@@ -193,7 +198,7 @@ public class ChatbotAdminServiceImpl implements ChatbotAdminService {
     public void streamAsk(String question, String adminEmail, SseEmitter emitter) {
         ChatClient chatClient = chatClientBuilder.build();
 
-        String sql = generateSql(chatClient, question, buildSqlPrompt(adminEmail));
+        String sql = generateSql(chatClient, question, buildSqlPrompt(adminEmail) + buildHistoryContext(adminEmail));
         if ("HORS_SCOPE".equalsIgnoreCase(sql)) {
             sendAndComplete(emitter,
                 "Cette question porte sur les politiques ou règlements RH. " +
@@ -322,6 +327,28 @@ public class ChatbotAdminServiceImpl implements ChatbotAdminService {
             rows += "\n... (" + (results.size() - 50) + " lignes supplémentaires)";
         }
         return rows;
+    }
+
+    // ── Conversation history for follow-up context ────────────────────────────
+
+    private String buildHistoryContext(String userEmail) {
+        List<ChatbotConversation> recent = conversationRepository.findByUserEmailOrderByCreatedAtDesc(
+                userEmail,
+                PageRequest.of(0, HISTORY_TURNS, Sort.by("createdAt").descending()));
+
+        if (recent.isEmpty()) return "";
+
+        StringBuilder sb = new StringBuilder("\n\n══ CONVERSATION PRÉCÉDENTE (pour résoudre les pronoms, références et questions de suivi) ══\n");
+        for (int i = recent.size() - 1; i >= 0; i--) {
+            ChatbotConversation c = recent.get(i);
+            sb.append("Q: ").append(c.getQuestion()).append("\n");
+            if (c.getSqlGenerated() != null && !c.getSqlGenerated().isBlank()) {
+                sb.append("SQL: ").append(c.getSqlGenerated()).append("\n");
+            }
+            sb.append("R: ").append(c.getResponse()).append("\n---\n");
+        }
+        sb.append("Si la nouvelle question contient des pronoms comme \"il\", \"elle\", \"ils\", \"ce département\", \"cet employé\", \"l'année précédente\", etc., résous-les grâce au contexte ci-dessus.\n");
+        return sb.toString();
     }
 
     // ── Persistence ───────────────────────────────────────────────────────────
