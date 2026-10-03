@@ -95,7 +95,8 @@ export function EmployeProvider({ children }) {
       toast.success(`Employé ${emp.prenom} ${emp.nom} créé avec succès${passMsg} !`, 10000);
     } catch (err) {
       console.error("Failed to add employee:", err);
-      toast.error("Erreur lors de la création de l'employé.");
+      const serverMsg = err.response?.data?.message || err.response?.data?.erreur || err.response?.data?.error;
+      toast.error(serverMsg || "Erreur lors de la création de l'employé.");
       throw err;
     }
   }
@@ -120,7 +121,8 @@ export function EmployeProvider({ children }) {
       toast.success("Informations de l'employé enregistrées !");
     } catch (err) {
       console.error("Failed to update employee:", err);
-      toast.error("Erreur lors de la modification de l'employé.");
+      const serverMsg = err.response?.data?.message || err.response?.data?.erreur || err.response?.data?.error;
+      toast.error(serverMsg || "Erreur lors de la modification de l'employé.");
       throw err;
     }
   }

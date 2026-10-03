@@ -70,6 +70,12 @@ export default function EmployeForm() {
       navigate('/admin/employes')
     } catch (err) {
       console.error(err)
+      const serverMsg = err.response?.data?.message || err.response?.data?.erreur || err.response?.data?.error || ''
+      if (serverMsg.toLowerCase().includes('email')) {
+        setErrors(prev => ({ ...prev, email: serverMsg }))
+      } else if (serverMsg.toLowerCase().includes('cin')) {
+        setErrors(prev => ({ ...prev, cin: serverMsg }))
+      }
     } finally {
       setLoading(false)
     }
