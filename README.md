@@ -155,6 +155,7 @@ gestionConges/
    MAIL_USERNAME=votre_adresse_gmail@gmail.com
    MAIL_PASSWORD=votre_mot_de_passe_application_google
    MISTRAL_API_KEY=votre_cle_mistral_ai
+   JWT_SECRET=IntraSpaceSecretKeyMustBeAtLeast32CharsLongForHMAC!
    ```
 
 3. Lancez le serveur Spring Boot avec Maven Wrapper :
