@@ -66,7 +66,7 @@ public class RagServiceImpl implements RagService {
             answer = "Désolé, je ne trouve pas d'informations RH pertinentes pour répondre à votre question.";
         } else {
             String context = documents.stream()
-                    .map(Document::getFormattedContent)
+                    .map(d -> d.getFormattedContent())
                     .collect(Collectors.joining("\n\n"));
 
             List<Message> history = buildHistoryMessages(userEmail);

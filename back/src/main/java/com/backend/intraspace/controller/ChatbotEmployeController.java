@@ -1,8 +1,6 @@
 package com.backend.intraspace.controller;
 
 import com.backend.intraspace.dtos.ChatbotRequest;
-import com.backend.intraspace.entities.ChatbotConversation;
-import com.backend.intraspace.repositories.ChatbotConversationRepository;
 import com.backend.intraspace.services.RagService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

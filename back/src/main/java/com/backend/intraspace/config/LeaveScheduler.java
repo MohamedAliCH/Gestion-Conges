@@ -3,6 +3,7 @@ package com.backend.intraspace.config;
 import com.backend.intraspace.entities.Employe;
 import com.backend.intraspace.repositories.EmployeRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -12,6 +13,7 @@ import java.util.List;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class LeaveScheduler {
 
     private final EmployeRepository employeRepository;
@@ -23,13 +25,13 @@ public class LeaveScheduler {
         if (!today.equals(today.with(TemporalAdjusters.lastDayOfMonth()))) return;
 
         List<Employe> actifs = employeRepository.findAll().stream()
-                .filter(Employe::isActive)
+                .filter(e -> e.isActive())
                 .toList();
 
         for (Employe employe : actifs) {
             employe.setSoldeAnnuel(employe.getSoldeAnnuel() + 2);
         }
         employeRepository.saveAll(actifs);
-        System.out.println("[Scheduler] Solde annuel incrémenté de 2 pour " + actifs.size() + " employé(s) actif(s) — " + today);
+        log.info("[Scheduler] Solde annuel incrémenté de 2 pour {} employé(s) actif(s) — {}", actifs.size(), today);
     }
 }

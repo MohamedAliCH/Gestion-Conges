@@ -106,7 +106,7 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     public List<DocumentUploadResponseDto> getAll() {
         return documentRepository.findAll().stream()
-                .sorted(Comparator.comparing(Document::getUploadDate, Comparator.reverseOrder()))
+                .sorted(Comparator.comparing(d -> d.getUploadDate(), Comparator.reverseOrder()))
                 .map(this::toDto)
                 .toList();
     }

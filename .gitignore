@@ -32,4 +32,12 @@ build/
 ### VS Code ###
 .vscode/
 .env
-front/
+back/run-backend.bat
+
+# Frontend artifacts
+front/node_modules/
+front/dist/
+front/.env
+front/.env.*
+front/*.local
+front/.vite/

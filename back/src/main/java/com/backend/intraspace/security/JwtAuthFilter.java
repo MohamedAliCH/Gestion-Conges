@@ -16,8 +16,6 @@ import java.io.IOException;
 
 @Component
 @RequiredArgsConstructor
-
-
 public class JwtAuthFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final CustomUserDetailsService customUserDetailsService;
@@ -56,8 +54,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         } catch (Exception e) {
             logger.warn("JWT validation failed: " + e.getMessage());
         }
-        
-        filterChain.doFilter(request,response);
-
+        filterChain.doFilter(request, response);
     }
 }

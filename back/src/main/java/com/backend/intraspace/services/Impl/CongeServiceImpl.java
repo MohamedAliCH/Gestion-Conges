@@ -180,11 +180,11 @@ public class CongeServiceImpl implements CongeService {
         int restantAnnuel = employe.getSoldeAnnuel();
         int utilisesAnnuel = conges.stream()
                 .filter(c -> "Congé Annuel".equals(c.getType()) && "Approuvé".equals(c.getStatus()))
-                .mapToInt(Conge::getDays)
+                .mapToInt(c -> c.getDays())
                 .sum();
         int enCoursAnnuel = conges.stream()
                 .filter(c -> "Congé Annuel".equals(c.getType()) && "En attente".equals(c.getStatus()))
-                .mapToInt(Conge::getDays)
+                .mapToInt(c -> c.getDays())
                 .sum();
         int acquisAnnuel = restantAnnuel + utilisesAnnuel + enCoursAnnuel;
 
@@ -192,22 +192,22 @@ public class CongeServiceImpl implements CongeService {
         int restantMaladie = employe.getSoldeMaladie();
         int utilisesMaladie = conges.stream()
                 .filter(c -> "Congé Maladie".equals(c.getType()) && "Approuvé".equals(c.getStatus()))
-                .mapToInt(Conge::getDays)
+                .mapToInt(c -> c.getDays())
                 .sum();
         int enCoursMaladie = conges.stream()
                 .filter(c -> "Congé Maladie".equals(c.getType()) && "En attente".equals(c.getStatus()))
-                .mapToInt(Conge::getDays)
+                .mapToInt(c -> c.getDays())
                 .sum();
         int acquisMaladie = restantMaladie + utilisesMaladie + enCoursMaladie;
 
         // --- Congé Sans Solde ---
         int utilisesSansSolde = conges.stream()
                 .filter(c -> "Congé Sans Solde".equals(c.getType()) && "Approuvé".equals(c.getStatus()))
-                .mapToInt(Conge::getDays)
+                .mapToInt(c -> c.getDays())
                 .sum();
         int enCoursSansSolde = conges.stream()
                 .filter(c -> "Congé Sans Solde".equals(c.getType()) && "En attente".equals(c.getStatus()))
-                .mapToInt(Conge::getDays)
+                .mapToInt(c -> c.getDays())
                 .sum();
 
         // --- Totaux ---

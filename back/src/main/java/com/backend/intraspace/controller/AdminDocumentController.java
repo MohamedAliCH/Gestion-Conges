@@ -5,6 +5,7 @@ import com.backend.intraspace.entities.Document;
 import com.backend.intraspace.repositories.DocumentRepository;
 import org.springframework.core.io.Resource;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -21,7 +22,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/admin/documents")
 @RequiredArgsConstructor
-
+@Slf4j
 public class AdminDocumentController {
 
     private final DocumentRepository documentRepository;
@@ -73,7 +74,7 @@ public class AdminDocumentController {
        try {
            Files.deleteIfExists(Paths.get(document.getFilePath()));
        } catch (IOException e) {
-           e.printStackTrace();
+           log.error("Erreur lors de la suppression du fichier physique : {}", document.getFilePath(), e);
        }
        documentRepository.delete(document);
        return ResponseEntity.noContent().build();

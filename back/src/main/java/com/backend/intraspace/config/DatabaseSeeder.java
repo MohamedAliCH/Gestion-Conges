@@ -6,6 +6,7 @@ import com.backend.intraspace.entities.Role;
 import com.backend.intraspace.repositories.CongeRepository;
 import com.backend.intraspace.repositories.EmployeRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -15,6 +16,7 @@ import java.time.LocalDate;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class DatabaseSeeder implements CommandLineRunner {
 
     private final EmployeRepository employeRepository;
@@ -25,7 +27,7 @@ public class DatabaseSeeder implements CommandLineRunner {
     @Transactional
     public void run(String... args) throws Exception {
         if (employeRepository.count() == 0) {
-            System.out.println("--- Seeding default users and leaves ---");
+            log.info("--- Seeding default users and leaves ---");
 
             // 1. Seed Admin
             Employe admin = new Employe();
@@ -39,7 +41,7 @@ public class DatabaseSeeder implements CommandLineRunner {
             admin.setCreatedAt(LocalDate.of(2026, 6, 17));
             admin.setFirstLogin(false);
             employeRepository.save(admin);
-            System.out.println("Admin seeded: admin@intraspace.com");
+            log.info("Admin seeded: admin@intraspace.com");
 
             // 2. Seed Employee
             Employe employee = new Employe();
@@ -55,7 +57,7 @@ public class DatabaseSeeder implements CommandLineRunner {
             employee.setPhone("+216 55 123 456");
             employee.setAddress("123 Avenue Habib Bourguiba, Tunis");
             Employe savedEmployee = employeRepository.save(employee);
-            System.out.println("Employee seeded: employe@intraspace.com");
+            log.info("Employee seeded: employe@intraspace.com");
 
             // 3. Seed Mock Leaves for savedEmployee
             Conge conge1 = new Conge();
@@ -85,8 +87,8 @@ public class DatabaseSeeder implements CommandLineRunner {
             conge3.setStatus("En attente");
             congeRepository.save(conge3);
 
-            System.out.println("Mock leaves seeded for employe@intraspace.com");
-            System.out.println("----------------------------------------");
+            log.info("Mock leaves seeded for employe@intraspace.com");
+            log.info("----------------------------------------");
         }
     }
 }

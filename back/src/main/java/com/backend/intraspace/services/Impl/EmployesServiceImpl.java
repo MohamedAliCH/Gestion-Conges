@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -21,12 +22,17 @@ import java.util.List;
 @RequiredArgsConstructor
 public class EmployesServiceImpl implements EmployesService {
 
+    private static final String PASSWORD_CHARS =
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    private static final int PASSWORD_LENGTH = 12;
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final EmployeRepository employeRepository;
     private final CongeRepository congeRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmployesMapper employesMapper;
     private final EmailService emailService;
+
     public EmployeResponseDto createEmploye(EmployeRequestDto employeRequestDto){
         if(employeRepository.existsByEmail(employeRequestDto.getEmail())) {
             throw new RuntimeException("Email déjà utilisé");
@@ -37,10 +43,9 @@ public class EmployesServiceImpl implements EmployesService {
 
         Employe employe = employesMapper.toEntity(employeRequestDto);
         
-        // Generate random 8 character password
-        String generatedPassword = java.util.UUID.randomUUID().toString().substring(0, 8);
+        // Generate a strong random password using SecureRandom
+        String generatedPassword = generateSecurePassword();
         employe.setPassword(passwordEncoder.encode(generatedPassword));
-        employe.setTempPassword(generatedPassword);
         employe.setCreatedAt(LocalDate.now());
         employe.setActive(true);
         employe.setFirstLogin(true);
@@ -59,6 +64,14 @@ public class EmployesServiceImpl implements EmployesService {
         EmployeResponseDto employeResponseDto=employesMapper.toDto(employe);
         employeResponseDto.setGeneratedPassword(generatedPassword);
         return employeResponseDto;
+    }
+
+    private String generateSecurePassword() {
+        StringBuilder sb = new StringBuilder(PASSWORD_LENGTH);
+        for (int i = 0; i < PASSWORD_LENGTH; i++) {
+            sb.append(PASSWORD_CHARS.charAt(SECURE_RANDOM.nextInt(PASSWORD_CHARS.length())));
+        }
+        return sb.toString();
     }
 
     public List<EmployeResponseDto> getAllEmployes(){
@@ -120,13 +133,7 @@ public class EmployesServiceImpl implements EmployesService {
         }
         employe.setPassword(passwordEncoder.encode(requestDto.getNewPassword()));
         employe.setFirstLogin(false);
-        employe.setTempPassword(null);
         employeRepository.save(employe);
     }
-
-
-
-
-
 
 }

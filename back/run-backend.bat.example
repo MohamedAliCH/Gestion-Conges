@@ -1,0 +1,10 @@
+@echo off
+rem Example run script with placeholders
+rem Copy this to run-backend.bat and set your actual values
+set DB_URL=jdbc:postgresql://<your-db-host>/neondb?sslmode=require
+set DB_USERNAME=neondb_owner
+set DB_PASSWORD=your_db_password
+set MAIL_USERNAME=your_email@gmail.com
+set MAIL_PASSWORD=your_mail_app_password
+set MISTRAL_API_KEY=your_mistral_api_key
+call .\mvnw.cmd spring-boot:run

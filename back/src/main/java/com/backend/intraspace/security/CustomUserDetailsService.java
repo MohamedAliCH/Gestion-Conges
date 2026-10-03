@@ -1,6 +1,5 @@
 package com.backend.intraspace.security;
 
-import org.springframework.security.core.userdetails.User;
 import com.backend.intraspace.entities.Employe;
 import com.backend.intraspace.repositories.EmployeRepository;
 import lombok.RequiredArgsConstructor;
@@ -17,9 +16,6 @@ import java.util.Collections;
 public class CustomUserDetailsService implements UserDetailsService {
     private final EmployeRepository employeRepository;
 
-
-
-
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         Employe employe=employeRepository.findByEmail(email)
@@ -32,6 +28,5 @@ public class CustomUserDetailsService implements UserDetailsService {
                         new SimpleGrantedAuthority(employe.getRole().name())
                 )
         );
-
     }
 }
